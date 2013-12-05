@@ -181,6 +181,7 @@ if(!class_exists('AC_Inspector')) {
 			// This function runs daily
 			$this->check_wp_upload_permissions();
 			$this->check_wp_file_permissions();
+			$this->check_site_visibility();
 
 			$this->log("Inspection completed with " . $this->_log_count . " remarks.");
 
@@ -287,6 +288,41 @@ if(!class_exists('AC_Inspector')) {
 			}
 
 		}
+
+		public function check_site_visibility() {
+
+			if ( is_multisite() ) {
+
+				global $wpdb;
+				$site_blog_ids = $wpdb->get_results($wpdb->prepare("SELECT blog_id FROM wp_blogs where blog_id > 1"));
+
+				foreach( $site_blog_ids AS $site_blog_id ) {
+
+					$visible = get_blog_details( $site_blog_id )->public;
+
+					if ( !$visible ) {
+
+						$this->log( 'Site '.$site_blog_id.' is not visible to search engines.', 'warning' );
+
+					}
+
+				}
+
+			} else {
+
+				$visible = get_option('blog_public');
+
+				if ( !$visible ) {
+
+					$this->log( 'The site is not visible to search engines.', 'warning' );
+
+				}
+
+			}
+			
+
+		}
+
 		/*
 			Logs if a plugin has been activated/deactivated
 		*/
@@ -302,7 +338,6 @@ if(!class_exists('AC_Inspector')) {
 			$message = 'Plugin "'.$plugin_data['Name']. '" was ' . $status . $usermsg . $site;
 
 			$this->log($message, 'warning');
-			$this->check_wp_upload_permissions();
 
 		}
 
@@ -331,7 +366,7 @@ if(!class_exists('AC_Inspector')) {
 		*/
 		private function log($message, $status = 'notice'){
 
-			if(!in_array($status, $this->log_levels)){
+			if ( !in_array($status, $this->_log_levels) ) {
 
 				$status = 'notice';
 			}
