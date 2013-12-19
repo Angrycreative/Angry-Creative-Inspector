@@ -3,7 +3,7 @@
 Plugin Name: Angry Creative Inspector
 Plugin URI: http://angrycreative.se
 Description: Inspects and logs possible issues with your Wordpress installation.
-Version: 0.2
+Version: 0.2.1
 Author: Robin Björklund, Sammy Nordström, Angry Creative AB
 */
 
@@ -294,18 +294,24 @@ if(!class_exists('AC_Inspector')) {
 			if ( is_multisite() ) {
 
 				global $wpdb;
-				$site_blog_ids = $wpdb->get_results($wpdb->prepare("SELECT blog_id FROM wp_blogs where blog_id > 1"));
+				$site_blog_ids = $wpdb->get_results($wpdb->prepare("SELECT blog_id FROM ".$wpdb->prefix."blogs where blog_id > 1"));
 
-				foreach( $site_blog_ids AS $site_blog_id ) {
+				if (is_array($site_blog_ids)) {
+					foreach( $site_blog_ids AS $site_blog_id ) {
 
-					$visible = get_blog_details( $site_blog_id )->public;
+						if (intval($site_blog_id) > 0) {
 
-					if ( !$visible ) {
+							$visible = get_blog_details( $site_blog_id )->public;
 
-						$this->log( 'Site '.$site_blog_id.' is not visible to search engines.', 'warning' );
+							if ( !$visible ) {
+
+								$this->log( 'Site '.$site_blog_id.' is not visible to search engines.', 'warning' );
+
+							}
+
+						}
 
 					}
-
 				}
 
 			} else {
