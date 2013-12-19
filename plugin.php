@@ -294,7 +294,7 @@ if(!class_exists('AC_Inspector')) {
 			if ( is_multisite() ) {
 
 				global $wpdb;
-				$site_blog_ids = $wpdb->get_results($wpdb->prepare("SELECT blog_id FROM ".$wpdb->prefix."blogs where blog_id > 1"));
+				$site_blog_ids = $wpdb->get_col($wpdb->prepare("SELECT blog_id FROM ".$wpdb->prefix."blogs where blog_id > 1"));
 
 				if (is_array($site_blog_ids)) {
 					foreach( $site_blog_ids AS $site_blog_id ) {
