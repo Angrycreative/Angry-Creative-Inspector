@@ -3,9 +3,12 @@
 Plugin Name: Angry Creative Inspector
 Plugin URI: http://angrycreative.se
 Description: Inspects and logs possible issues with your Wordpress installation.
-Version: 0.2.2
+Version: 0.2.3
 Author: Robin Björklund, Sammy Nordström, Angry Creative AB
 */
+
+if ( ! function_exists( 'is_plugin_active_for_network' ) )
+    require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
 
 if(!class_exists('AC_Inspector')) { 
 
@@ -20,11 +23,22 @@ if(!class_exists('AC_Inspector')) {
 		private $_plugin_options_url = "";
 
 		private $_log_count= 0;
+
+		private $_plugin_dir = "";
+		private $_plugin_file = "";
 		
 		public function __construct() {
 
+			$this->_plugin_dir = basename( dirname( __FILE__ ) );
+			$this->_plugin_file = basename( __FILE__ );
+
 			$this->_default_log_path = WP_PLUGIN_DIR.'/'.basename(__DIR__).'/inspection.log';
-			$this->_plugin_options_url = admin_url('options-general.php').'?page=logger-settings-admin';
+
+			if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+				$this->_plugin_options_url = network_admin_url('settings.php').'?page=ac-inspector-settings';
+			} else {
+				$this->_plugin_options_url = admin_url('options-general.php').'?page=ac-inspector-settings';
+			}
 
 			$this->get_log_path();
 
@@ -47,9 +61,21 @@ if(!class_exists('AC_Inspector')) {
 
 			// Settings
 			if ( is_admin() ) {
-            	add_action( 'admin_menu', array( $this, 'add_plugin_page' ) );
-            	add_action( 'admin_init', array( $this, 'plugin_page_init' ) );
-            	add_action( 'admin_notices', array( $this, 'admin_error_notice' ) );
+
+				add_action( 'admin_init', array( $this, 'plugin_page_init' ) );
+
+				if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+
+					add_action( 'network_admin_menu', array( $this, 'add_plugin_page' ) );
+            		add_action( 'network_admin_notices', array( $this, 'admin_error_notice' ) );
+
+				} else {
+
+            		add_action( 'admin_menu', array( $this, 'add_plugin_page' ) );
+            		add_action( 'admin_notices', array( $this, 'admin_error_notice' ) );
+
+            	}
+
         	}
 
         	add_action('ac_inspector_event', array($this, 'inspect') );
@@ -70,24 +96,66 @@ if(!class_exists('AC_Inspector')) {
 		
 		}
 
+		private function _get_option( $name ) {
+
+			if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+
+				return get_site_option( $name );
+
+			} else {
+
+				return get_option( $name );
+
+			}
+			
+		}
+
+		private function _add_option( $name, $value ) {
+
+			if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+
+				return add_site_option( $name, $value );
+
+			} else {
+
+				return add_option( $name, $value );
+
+			}
+
+		}
+
+		private function _update_option($name, $value) {
+
+			if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+
+				return update_site_option( $name, $value );
+
+			} else {
+
+				return update_option( $name, $value );
+
+			}
+
+		}
+
 		public function get_log_path() {
 
-			$this->log_path = get_option('ac_inspector_log_path');
+			$this->log_path = $this->_get_option('ac_inspector_log_path');
 
 			if( empty($this->log_path) ) {
 
 				// For backwards compatibility with versions <= 0.1.1
-				$this->log_path = get_option('log_path');
+				$this->log_path = $this->_get_option( 'log_path' );
 
 				if( !empty($this->log_path) ) {
 
 					// Set new option variable name
-					update_option( 'ac_inspector_log_path', $this->log_path );
+					$this->_update_option( 'ac_inspector_log_path', $this->log_path );
 
 				} else {
 
 					$this->log_path = $this->_default_log_path;
-					update_option( 'ac_inspector_log_path', $this->_default_log_path );
+					$this->_update_option( 'ac_inspector_log_path', $this->_default_log_path );
 
 				}
 				
@@ -291,7 +359,7 @@ if(!class_exists('AC_Inspector')) {
 
 		public function check_site_visibility() {
 
-			if ( is_multisite() ) {
+			if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
 
 				global $wpdb;
 				$site_blog_ids = $wpdb->get_col($wpdb->prepare("SELECT blog_id FROM ".$wpdb->prefix."blogs where blog_id > 1"));
@@ -398,7 +466,11 @@ if(!class_exists('AC_Inspector')) {
 		public function add_plugin_page() {
 
       		// This page will be under "Settings"
-       		add_options_page( 'Settings Admin', 'AC Logger', 'manage_options', 'logger-settings-admin', array( $this, 'create_admin_page' ) );
+      		if ( is_multisite() && is_plugin_active_for_network( $this->_plugin_dir."/".$this->_plugin_file ) ) {
+      			add_submenu_page('settings.php', 'AC Inspector', 'AC Inspector', 'manage_options', 'ac-inspector-settings', array( $this, 'create_admin_page' ) );
+      		} else {
+       			add_options_page( 'Settings Admin', 'AC Inspector', 'manage_options', 'ac-inspector-settings', array( $this, 'create_admin_page' ) );
+       		}
     	
     	}
 
@@ -412,10 +484,10 @@ if(!class_exists('AC_Inspector')) {
 
 			    <h2><?php _e('Inställningar'); ?></h2>		
 
-			    <form method="post" action="options.php">
+			    <form method="post" action="<?php echo $this->_plugin_options_url; ?>">
 			        <?php
 				    	settings_fields( 'log_path_options' );	
-				    	do_settings_sections( 'logger-settings-admin' );
+				    	do_settings_sections( 'ac-inspector-settings' );
 			        	submit_button(); 
 			        ?>
 			    </form>
@@ -492,14 +564,14 @@ if(!class_exists('AC_Inspector')) {
 	            'setting_section_id',
 	            'Setting',
 	            array( $this, 'print_section_info' ),
-	            'logger-settings-admin'
+	            'ac-inspector-settings'
 	        );	
 	            
 	        add_settings_field(
 	            'log_path', 
 	            'Relative path to log file', 
 	            array( $this, 'create_an_id_field' ), 
-	            'logger-settings-admin',
+	            'ac-inspector-settings',
 	            'setting_section_id'			
 	        );
 
@@ -509,13 +581,15 @@ if(!class_exists('AC_Inspector')) {
 
             $path = $input['log_path'];
 
-            if ( get_option( 'ac_inspector_log_path' ) === FALSE ) {
+            $saved_option = $this->_get_option( 'ac_inspector_log_path' );
 
-                add_option( 'ac_inspector_log_path', $path );
+            if ( $saved_option === FALSE ) {
+
+            	$this->_add_option( 'ac_inspector_log_path', $path );
 
             } else {
 
-                update_option( 'ac_inspector_log_path', $path );
+                $this->_update_option( 'ac_inspector_log_path', $path );
 
             }
 
@@ -531,8 +605,16 @@ if(!class_exists('AC_Inspector')) {
 		
 	    public function create_an_id_field() {
 
+	    	$this->log_path = $this->_get_option( 'ac_inspector_log_path' );
+
+	    	if ( !empty($_POST['array_key']['log_path']) && $_POST['array_key']['log_path'] != $this->log_path ) {
+
+	    		$this->check_new_log_path( $_POST['array_key'] );
+
+	    	}
+
 	        ?>
-	        <input type="text" size="80" id="log_path_id" name="array_key[log_path]" value="<?php echo get_option( 'ac_inspector_log_path' ); ?>" />
+	        <input type="text" size="80" id="log_path_id" name="array_key[log_path]" value="<?php echo $this->_get_option( 'ac_inspector_log_path' ); ?>" />
 			<?php
 
 	    }
