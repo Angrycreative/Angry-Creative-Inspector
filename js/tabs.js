@@ -1,0 +1,2 @@
+
+jQuery('#aci-tabs').tabs();
