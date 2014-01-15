@@ -1,6 +1,6 @@
 <?php
 /*
-Class name: ACI Routine Handler
+Class name: ACI Settings
 Version: 0.1
 Depends: AC Inspector 0.3.x
 Author: Sammy Nordström, Angry Creative AB
