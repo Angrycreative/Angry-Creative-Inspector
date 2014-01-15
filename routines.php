@@ -45,7 +45,7 @@ function aci_check_wp_upload_permissions() {
 
 	} catch ( Exception $e ) {
 
-		return AC_Inspector::log($e->getMessage(), __FUNCTION__);
+		AC_Inspector::log($e->getMessage(), __FUNCTION__);
 
 	}
 
@@ -91,13 +91,13 @@ function aci_check_wp_file_permissions(){
 		if(defined('DISALLOW_FILE_MODS') && true == DISALLOW_FILE_MODS) {	
 
 			if($file_created) {
-				return AC_Inspector::log('Was able to create a file in `/' . $folder . '` despite DISALLOW_FILE_MODS being set to true. Check your file permissions.', __FUNCTION__);
+				AC_Inspector::log('Was able to create a file in `/' . $folder . '` despite DISALLOW_FILE_MODS being set to true. Check your file permissions.', __FUNCTION__);
 			}
 
 		} else {
 
 			if(!$file_created){
-				return AC_Inspector::log('Was not able to create a file in `/' . $folder . '`. Check your file permissions.', __FUNCTION__);
+				AC_Inspector::log('Was not able to create a file in `/' . $folder . '`. Check your file permissions.', __FUNCTION__);
 			}
 
 		}
@@ -128,7 +128,7 @@ function aci_check_site_visibility() {
 
 					if ( !$visible ) {
 
-						return AC_Inspector::log('Site '.$site_blog_id.' is not visible to search engines.', __FUNCTION__);
+						AC_Inspector::log('Site '.$site_blog_id.' is not visible to search engines.', __FUNCTION__);
 
 					}
 
@@ -143,7 +143,7 @@ function aci_check_site_visibility() {
 
 		if ( !$visible ) {
 
-			return AC_Inspector::log('The site is not visible to search engines.', __FUNCTION__);
+			AC_Inspector::log('The site is not visible to search engines.', __FUNCTION__);
 
 		}
 
