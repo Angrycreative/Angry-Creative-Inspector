@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.1
+Version: 0.1.1
 Depends: AC Inspector 0.3.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -78,11 +78,11 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				self::$routine_events[$routine] = array();
 			}
 
-			self::$routine_events[$routine][] = $action;
-
-			if ( $action == "ac_inspection" || has_action( $action ) ) {
-				add_action( $action, $routine, $priority, $accepted_args );
+			if ( in_array($action, self::$routine_events[$routine]) ) {
+				return false;
 			}
+
+			self::$routine_events[$routine][] = $action;
 
 			if ( !empty( $options ) ) {
 
@@ -94,6 +94,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			}
 
+			add_action( $action, $routine, $priority, $accepted_args );
+
 			return true;
 
 		}
@@ -104,20 +106,19 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				return false;
 			}
 
-			if ( is_array(self::$routine_events[$routine]) && count(self::$routine_events[$routine]) > 0 ) {
+			if ( !is_array(self::$routine_events[$routine]) || count(self::$routine_events[$routine]) == 0 ) {
+				return false;
+			}
 
-				if ( $action_key = array_search( $action, self::$routine_events[$routine] ) ) {
+			if ( $action_key = array_search( $action, self::$routine_events[$routine] ) ) {
 
-					remove_action( $routine_events[$routine][$action_key], $routine, $priority );
-
-				}
-
-				unset(self::$routine_events[$routine]);
-				return true;
+				remove_action( $routine_events[$routine][$action_key], $routine, $priority );
 
 			}
 
-			return false;
+			unset(self::$routine_events[$routine]);
+			
+			return true;
 
 		}
 

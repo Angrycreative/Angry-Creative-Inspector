@@ -169,6 +169,8 @@ function aci_log_plugin_change($plugin){
 
 	AC_Inspector::log($message, __FUNCTION__);
 
+	return "";
+
 }
 
 /*
@@ -183,6 +185,8 @@ function aci_log_site_change($site){
 
 	AC_Inspector::log($message, __FUNCTION__);
 
+	return "";
+
 }
 
 /*
@@ -191,6 +195,8 @@ function aci_log_site_change($site){
 function aci_log_wp_mail($mail) {
 
 	// AC_Inspector::log($mail, __FUNCTION__);
+
+	return "";
 
 }
 
