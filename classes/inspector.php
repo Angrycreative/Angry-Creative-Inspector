@@ -1,4 +1,9 @@
 <?php 
+/*
+Class name: AC Inspector
+Version: 0.3
+Author: Sammy Nordström, Angry Creative AB
+*/
 
 if(!class_exists('AC_Inspector')) { 
 

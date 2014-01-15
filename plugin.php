@@ -17,25 +17,25 @@ if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
 }
 
 // Load required classes
-require( dirname( __FILE__ ) . "/classes/inspector.php" );
-require( dirname( __FILE__ ) . "/classes/routine_handler.php" );
+require( ACI_PLUGIN_DIR . "/classes/inspector.php" );
+require( ACI_PLUGIN_DIR . "/classes/routine_handler.php" );
 
 // Load required functions
-require( dirname( __FILE__ ) . "/functions.php" );
+require( ACI_PLUGIN_DIR . "/functions.php" );
 
 // Load inspection routines
-require( dirname( __FILE__ ) . "/routines.php" );
+require( ACI_PLUGIN_DIR . "/routines.php" );
 
 // If in admin, also load settings class
 if (is_admin()) {
-	require( dirname( __FILE__ ) . "/classes/settings.php" );
+	require( ACI_PLUGIN_DIR . "/classes/settings.php" );
 }
 
 if ( class_exists( 'AC_Inspector' ) ) {
 
 	// Installation and uninstallation hooks
-	register_activation_hook(__FILE__, array('AC_Inspector', 'activate'));
-	register_deactivation_hook(__FILE__, array('AC_Inspector', 'deactivate'));
+	register_activation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'activate') );
+	register_deactivation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'deactivate') );
 
 	$ac_inspector = new AC_Inspector();
 
