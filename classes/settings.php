@@ -46,7 +46,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 		public function admin_notices() {
 
-			if ( $_REQUEST['updated'] ) {
+			if ( 'ac-inspector' == $_GET['page'] && isset( $_GET['updated'] ) ) {
 
 				echo '<div class="updated"><p>';
 				echo 'Your AC Inspector settings was updated successfully.';
