@@ -1,8 +1,8 @@
 <?php
 /*
 Class name: ACI Settings
-Version: 0.1.1
-Depends: AC Inspector 0.3.x
+Version: 0.2
+Depends: AC Inspector 0.4.x
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -214,7 +214,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	        add_settings_section(
 	            'aci_general_options',
 	            'General',
-	            array( $this, 'print_log_path_info' ),
+	            array( $this, 'print_general_settings_info' ),
 	            'ac-inspector'
 	        );	
 	            
@@ -231,26 +231,40 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	        if ( is_array($inspection_routines) && count($inspection_routines) > 0 ) { 
 	            
 		        add_settings_section(
-		            'aci_inspection_routine_options',
+		            'aci_inspection_routine_settings',
 		            'Routines on General Inspection',
-		            array( $this, 'print_inspection_routine_options_info' ),
+		            array( $this, 'print_inspection_routine_settings_info' ),
 		            'ac-inspector'
-		        );	
+		        );
+
+		        $routine_fields = array();	
 
 				foreach( $inspection_routines as $routine ) { 
 
-					$routine_label = ucwords(str_replace("_", " ", str_replace("wp_", "", str_replace("aci_", "", $routine))));
-					$routine_options_key = ACI_Routine_Handler::routine_options_key($routine);
+					$routine_settings_fields[$routine] = array();
+
+					$routine_settings_fields[$routine]['id'] = $routine.'_settings_field';
+					$routine_settings_fields[$routine]['title'] = ucwords(str_replace("_", " ", str_replace("wp_", "", str_replace("aci_", "", str_replace("routine_", "", strtolower($routine))))));
+					$routine_settings_fields[$routine]['callback'] = array( &$this, 'routine_settings_field' );
+					$routine_settings_fields[$routine]['page'] = 'ac-inspector';
+					$routine_settings_fields[$routine]['section'] = 'aci_inspection_routine_settings';
+					$routine_settings_fields[$routine]['args'] = array('routine' => $routine);
+
+					$routine_settings_fields[$routine] = apply_filters( $routine.'_settings_field_args', $routine_settings_fields[$routine] );
+							
+				}
+
+				foreach( $routine_settings_fields as $routine_field ) {
 
 					add_settings_field(
-			            $routine.'_log_level', 
-			            $routine_label, 
-			            array( $this, 'log_level_field' ), 
-			            'ac-inspector',
-			            'aci_inspection_routine_options',
-			            array('routine' => $routine)		
+			            $routine_field['id'], 
+			            $routine_field['title'], 
+			            $routine_field['callback'], 
+			            $routine_field['page'],
+			            $routine_field['section'],
+			            $routine_field['args']		
 			        );
-							
+
 				}
 
 			}
@@ -260,26 +274,38 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 			if ( is_array($wp_hook_routines) && count($wp_hook_routines) > 0 ) { 
 	            
 		        add_settings_section(
-		            'aci_wp_hook_routine_options',
+		            'aci_wp_hook_routine_settings',
 		            'Routines on WP Hooks',
-		            array( $this, 'print_wp_hook_routine_options_info' ),
+		            array( $this, 'print_wp_hook_routine_settings_info' ),
 		            'ac-inspector'
 		        );	
 
 				foreach( $wp_hook_routines as $routine ) { 
 
-					$routine_label = ucwords(str_replace("_", " ", str_replace("wp_", "", str_replace("aci_", "", $routine))));
-					$routine_options_key = ACI_Routine_Handler::routine_options_key($routine);
+					$routine_settings_fields[$routine] = array();
+
+					$routine_settings_fields[$routine]['id'] = $routine.'_settings_field';
+					$routine_settings_fields[$routine]['title'] = ucwords(str_replace("_", " ", str_replace("wp_", "", str_replace("aci_", "", str_replace("routine_", "", strtolower($routine))))));
+					$routine_settings_fields[$routine]['callback'] = array( &$this, 'routine_settings_field' );
+					$routine_settings_fields[$routine]['page'] = 'ac-inspector';
+					$routine_settings_fields[$routine]['section'] = 'aci_wp_hook_routine_settings';
+					$routine_settings_fields[$routine]['args'] = array('routine' => $routine);
+
+					$routine_settings_fields[$routine] = apply_filters( $routine.'_settings_field_args', $routine_settings_fields[$routine] );
+							
+				}
+
+				foreach( $routine_settings_fields as $routine_field ) {
 
 					add_settings_field(
-			            $routine.'_log_level', 
-			            $routine_label, 
-			            array( $this, 'log_level_field' ), 
-			            'ac-inspector',
-			            'aci_wp_hook_routine_options',
-			            array('routine' => $routine)		
+			            $routine_field['id'], 
+			            $routine_field['title'], 
+			            $routine_field['callback'], 
+			            $routine_field['page'],
+			            $routine_field['section'],
+			            $routine_field['args']		
 			        );
-							
+
 				}
 
 			}
@@ -310,18 +336,24 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 			foreach( array_keys($routines) as $routine ) { 
 
-				$routine_options = ACI_Routine_Handler::get_options($routine);
-	            $new_routine_options = $input[$routine];
+				$routine_settings = ACI_Routine_Handler::get_options($routine);
+	            $new_routine_settings = $input[$routine];
 
-	            foreach($routine_options as $opt => $val) {
+	            foreach($routine_settings as $opt => $val) {
 
-	            	if (isset($new_routine_options[$opt])) {
-	            		$routine_options[$opt] = $new_routine_options[$opt];
+	            	if (isset($new_routine_settings[$opt])) {
+	            		$routine_settings[$opt] = $new_routine_settings[$opt];
 	            	}
 
 	            }
 
-	            ACI_Routine_Handler::set_options( $routine, $routine_options );
+	            $routine_settings = apply_filters( $routine.'_settings', $routine_settings );
+
+	            echo $routine . "<br />";
+
+	            var_dump($routine_settings);
+
+	            ACI_Routine_Handler::set_options( $routine, $routine_settings );
 
 	        }
 
@@ -343,19 +375,19 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	    }
 		
-	    public function print_log_path_info() {
+	    public function print_general_settings_info() {
 
 	        print 'These are your general settings:';
 
 	    }
 
-	    public function print_inspection_routine_options_info() {
+	    public function print_inspection_routine_settings_info() {
 
 	        print 'Below you can set options for your inspection routines on scheduled and user activated inspections:';
 
 	    }
 
-	    public function print_wp_hook_routine_options_info() {
+	    public function print_wp_hook_routine_settings_info() {
 
 	        print 'Below you can set options for your inspection routines triggered by Wordpress hooks:';
 
@@ -369,11 +401,11 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	    }
 
-	    public function log_level_field($args) {
+	    public function routine_settings_field($args) {
 
 	    	$routine = $args['routine'];
 	    	$log_levels = AC_Inspector::get_log_levels();
-	    	$routine_options = ACI_Routine_Handler::get_options($routine);
+	    	$routine_settings = ACI_Routine_Handler::get_options($routine);
 
 			?>
 
@@ -383,7 +415,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 					<select id="<?php echo $routine; ?>_log_level" name="aci_options[<?php echo $routine; ?>][log_level]">
 						<?php foreach( $log_levels as $level ) { ?>
 
-							<option value="<?php echo $level; ?>"<?php echo ($level == $routine_options['log_level']) ? " selected" : ""; ?>><?php echo ucfirst($level); ?></option>
+							<option value="<?php echo $level; ?>"<?php echo ($level == $routine_settings['log_level']) ? " selected" : ""; ?>><?php echo ucfirst($level); ?></option>
 
 						<?php } ?>
 					</select>
@@ -391,6 +423,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 			</tr>
 
 			<?php
+
+			do_action($routine.'_settings_field', $routine_settings, $args);
 
 	    }
 

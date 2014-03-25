@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.3
+Version: 0.4
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -33,6 +33,12 @@ if(!class_exists('AC_Inspector')) {
 				'ignore'
 			);
 
+			$this->_on_update();
+
+			add_action( 'ac_inspection', function() {
+				AC_Inspector::log("Inspection completed with " . AC_Inspector::$_log_count . " remarks.");
+			}, 999, 0 );
+
 		}
 
 		/* Add Cron Job on activation, that test permissions etc. */
@@ -47,6 +53,20 @@ if(!class_exists('AC_Inspector')) {
 
 			wp_clear_scheduled_hook( 'ac_inspection');
 		
+		}
+
+		/* Plugin update actions */
+		private function _on_update() {
+
+			if ( version_compare(get_option(__CLASS__.'_Version', true), ACI_PLUGIN_VERSION, '<') ) {
+
+				$this->deactivate();
+				$this->activate();
+
+				set_option(__CLASS__.'_Version', ACI_PLUGIN_VERSION);
+
+			}
+
 		}
 
 		public static function get_log_levels() {
@@ -187,8 +207,6 @@ if(!class_exists('AC_Inspector')) {
 		public function inspect() {
 
 			do_action( 'ac_inspection' );
-
-			self::log("Inspection completed with " . self::$_log_count . " remarks.");
 
 		}
 

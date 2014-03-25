@@ -1,8 +1,8 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.1.1
-Depends: AC Inspector 0.3.x
+Version: 0.2
+Depends: AC Inspector 0.4.x
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -27,6 +27,50 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			}
 
 			return $routine_option_key;
+
+		}
+
+		public static function get_inspection_method($routine, $options = array()) {
+
+			if (empty($routine)) {
+				return false;
+			}
+
+			if (!is_array($options) || empty($options)) {
+
+				$options = self::get_options($routine);
+
+				if (!is_array($options)) {
+					$options = array();
+				}
+
+			}
+
+			if (class_exists($routine)) {
+
+				if ($options['inspection_method'] && method_exists($routine, $options['inspection_method'])) {
+
+					return array($routine, $options['inspection_method']);
+
+				} else if (method_exists($routine, 'inspect')) {
+
+					return array($routine, 'inspect');
+
+				}
+
+			} 
+
+			if (!empty($options['inspection_method']) && function_exists($options['inspection_method'])) {
+
+				return $options['inspection_method'];
+
+			} else if (function_exists($routine)) {
+
+				return $routine;
+
+			}
+
+			return false;
 
 		}
 
@@ -66,7 +110,9 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function add($routine, $options = array(), $action = "ac_inspection", $priority = 10, $accepted_args = 1) {
 
-			if ( empty($routine) ) {
+			$inspection_method = self::get_inspection_method($routine);
+
+			if ( !$inspection_method ) {
 				return false;
 			}
 
@@ -94,7 +140,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			}
 
-			add_action( $action, $routine, $priority, $accepted_args );
+			add_action( $action, $inspection_method, $priority, $accepted_args );
 
 			return true;
 

@@ -3,13 +3,15 @@
 Plugin Name: Angry Creative Inspector
 Plugin URI: http://angrycreative.se
 Description: Inspects and logs possible issues with your Wordpress installation.
-Version: 0.3.3
+Version: 0.4
 Author: Robin Björklund, Sammy Nordström, Angry Creative AB
 */
 
-define('ACI_PLUGIN_DIR', dirname( __FILE__ ) );
-define('ACI_PLUGIN_FILE',  __FILE__ );
-define('ACI_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define( 'ACI_PLUGIN_VERSION', '0.4' );
+
+define( 'ACI_PLUGIN_DIR', dirname( __FILE__ ) );
+define( 'ACI_PLUGIN_FILE',  __FILE__ );
+define( 'ACI_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // Needed for multisite support
 if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
@@ -24,7 +26,9 @@ require( ACI_PLUGIN_DIR . "/classes/routine_handler.php" );
 require( ACI_PLUGIN_DIR . "/functions.php" );
 
 // Load inspection routines
-require( ACI_PLUGIN_DIR . "/routines.php" );
+foreach ( glob( ACI_PLUGIN_DIR."/routines/*.php" ) as $routine_file ) {
+    include $routine_file;
+}
 
 // If in admin, also load settings class
 if (is_admin()) {
