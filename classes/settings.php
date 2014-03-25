@@ -349,10 +349,6 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	            $routine_settings = apply_filters( $routine.'_settings', $routine_settings );
 
-	            echo $routine . "<br />";
-
-	            var_dump($routine_settings);
-
 	            ACI_Routine_Handler::set_options( $routine, $routine_settings );
 
 	        }
