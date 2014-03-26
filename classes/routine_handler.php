@@ -1,14 +1,14 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.2
+Version: 0.2.1
 Depends: AC Inspector 0.4.x
 Author: Sammy Nordström, Angry Creative AB
 */
 
 if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) { 
 
-	class ACI_Routine_Handler extends AC_Inspector {
+	class ACI_Routine_Handler {
 
 		private static $routine_events = array();
 
@@ -82,7 +82,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$options_key = self::routine_options_key($routine);
 
-			return parent::update_option($options_key, $args);
+			return AC_Inspector::update_option($options_key, $args);
 			
 		}
 
@@ -94,7 +94,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$options_key = self::routine_options_key($routine);
 
-			return parent::get_option($options_key);
+			return AC_Inspector::get_option($options_key);
 
 		}
 

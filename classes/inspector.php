@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.4
+Version: 0.4.1
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -58,12 +58,14 @@ if(!class_exists('AC_Inspector')) {
 		/* Plugin update actions */
 		private function _on_update() {
 
-			if ( version_compare(get_option(__CLASS__.'_Version', true), ACI_PLUGIN_VERSION, '<') ) {
+			$saved_version = self::get_option( __CLASS__.'_Version', ACI_PLUGIN_VERSION );
 
-				$this->deactivate();
-				$this->activate();
+			if ( empty($saved_version) || version_compare($saved_version, ACI_PLUGIN_VERSION, '<') ) {
 
-				set_option(__CLASS__.'_Version', ACI_PLUGIN_VERSION);
+				self::deactivate();
+				self::activate();
+
+				self::update_option( __CLASS__.'_Version', ACI_PLUGIN_VERSION );
 
 			}
 

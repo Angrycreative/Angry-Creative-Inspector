@@ -3,11 +3,11 @@
 Plugin Name: Angry Creative Inspector
 Plugin URI: http://angrycreative.se
 Description: Inspects and logs possible issues with your Wordpress installation.
-Version: 0.4
+Version: 0.4.1
 Author: Robin Björklund, Sammy Nordström, Angry Creative AB
 */
 
-define( 'ACI_PLUGIN_VERSION', '0.4' );
+define( 'ACI_PLUGIN_VERSION', '0.4.1' );
 
 define( 'ACI_PLUGIN_DIR', dirname( __FILE__ ) );
 define( 'ACI_PLUGIN_FILE',  __FILE__ );
@@ -41,10 +41,10 @@ if ( class_exists( 'AC_Inspector' ) ) {
 	register_activation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'activate') );
 	register_deactivation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'deactivate') );
 
-	$ac_inspector = new AC_Inspector();
-
 	if (is_admin()) {
-		$ac_inspector_settings = new ACI_Settings();
+		$ac_inspector = new ACI_Settings();
+	} else {
+		$ac_inspector = new AC_Inspector();
 	}
 
 }

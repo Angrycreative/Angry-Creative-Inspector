@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Settings
-Version: 0.2
+Version: 0.2.1
 Depends: AC Inspector 0.4.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -14,6 +14,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 		private static $_plugin_actions_url = "";
 
 		public function __construct() {
+
+			parent::__construct();
 
 			add_action( 'admin_init', array( $this, 'plugin_page_init' ) );
 
