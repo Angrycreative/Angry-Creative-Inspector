@@ -11,11 +11,10 @@ if(!class_exists('AC_Inspector')) {
 
 		public static $log_path = "";
 		public static $errors = array();
+		public static $log_count = 0;
 
 		private static $_default_log_path = "";
 		private static $_log_levels = array();
-
-		private static $_log_count = 0;
 		
 		public function __construct() {
 
@@ -36,7 +35,7 @@ if(!class_exists('AC_Inspector')) {
 			$this->_on_update();
 
 			add_action( 'ac_inspection', function() {
-				AC_Inspector::log("Inspection completed with " . AC_Inspector::$_log_count . " remarks.");
+				AC_Inspector::log("Inspection completed with " . AC_Inspector::$log_count . " remarks.");
 			}, 999, 0 );
 
 		}
@@ -250,7 +249,7 @@ if(!class_exists('AC_Inspector')) {
 
 	        	}
 
-	        	self::$_log_count++;
+	        	self::$log_count++;
 
 	        }
 
