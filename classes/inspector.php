@@ -1,13 +1,15 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.4.1
+Version: 0.4.2
 Author: Sammy Nordström, Angry Creative AB
 */
 
 if(!class_exists('AC_Inspector')) { 
 
 	class AC_Inspector { 
+
+		private static $_this;
 
 		public static $log_path = "";
 		public static $errors = array();
@@ -18,32 +20,46 @@ if(!class_exists('AC_Inspector')) {
 		
 		public function __construct() {
 
-			self::$_default_log_path = ACI_PLUGIN_DIR . '/inspection.log';
+			if ( !isset( self::$_this ) ) {
 
-			$this->_get_log_path();
+				self::$_this = $this;
 
-			$this->_check_log_path();
+				self::$_default_log_path = ACI_PLUGIN_DIR . '/inspection.log';
 
-			// Define log levels
-			self::$_log_levels = array(
-				'notice',
-				'warning',
-				'fatal',
-				'ignore'
-			);
+				$this->_get_log_path();
 
-			$this->_on_update();
+				$this->_check_log_path();
 
-			add_action( 'ac_inspection', function() {
-				AC_Inspector::log("Inspection completed with " . AC_Inspector::$log_count . " remarks.");
-			}, 999, 0 );
+				// Define log levels
+				self::$_log_levels = array(
+					'notice',
+					'warning',
+					'fatal',
+					'ignore'
+				);
 
+				$this->_on_update();
+
+				add_action( 'ac_inspection', function() {
+					AC_Inspector::log("Inspection completed with " . AC_Inspector::$log_count . " remarks.");
+				}, 999, 0 );
+
+			}
+
+		}
+
+		static function this() {
+		    return self::$_this;
 		}
 
 		/* Add Cron Job on activation, that test permissions etc. */
 		public static function activate() { 
 
-			wp_schedule_event( time(), 'daily', 'ac_inspection');
+			if ( !wp_next_scheduled( 'ac_inspection' ) ) {
+
+				wp_schedule_event( time(), 'daily', 'ac_inspection');
+
+			}
 
 		}
 
@@ -207,7 +223,11 @@ if(!class_exists('AC_Inspector')) {
 
 		public function inspect() {
 
-			do_action( 'ac_inspection' );
+			if ( !did_action( 'ac_inspection' ) ) {
+
+				do_action( 'ac_inspection' );
+
+			}
 
 		}
 

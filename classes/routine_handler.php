@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.2.1
+Version: 0.2.2
 Depends: AC Inspector 0.4.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -129,6 +129,10 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			}
 
 			self::$routine_events[$routine][] = $action;
+
+			if ( has_action( $action, $inspection_method ) === $priority ) {
+				return false;
+			}
 
 			if ( !empty( $options ) ) {
 
