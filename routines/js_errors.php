@@ -11,10 +11,6 @@ class ACI_Routine_Log_JS_Errors {
 		
 		aci_register_routine( __CLASS__, $options, 'init' );
 
-		add_action( __CLASS__.'_settings_field', array( __CLASS__, 'settings_field' ), 10, 2 );
-
-		add_filter( __CLASS__.'_settings',  array( __CLASS__, 'settings' ), 10, 1 );
-
 	}
 
 	public static function setup() {
