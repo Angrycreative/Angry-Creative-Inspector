@@ -10,23 +10,25 @@ class ACI_Routine_Log_JS_Errors {
 						  'inspection_method' => 'setup' );
 		
 		aci_register_routine( __CLASS__, $options, 'init' );
+		aci_register_routine( __CLASS__, $options, 'admin-init' );
 
 	}
 
 	public static function setup() {
 
 		// Add our js to the head of the page, i.e. as early as possible
-		add_action("wp_head", array( $this, "add_js_to_header" ) );
+		add_action("wp_head", array( __CLASS__, "add_js_to_header" ), 1 );
+		add_action("admin_head", array( __CLASS__, "add_js_to_header" ), 1 );
 
 		// Add ajax action
-		add_action('wp_ajax_log_js_error', array($this, "log_error") );
-		add_action('wp_ajax_nopriv_log_js_error', array($this, "log_error") );
+		add_action('wp_ajax_log_js_error', array( __CLASS__, "log_error"), 1 );
+		add_action('wp_ajax_nopriv_log_js_error', array( __CLASS__, "log_error"), 1 );
 
 	}
 
 	public static function add_js_to_header() {
 		?>
-		<script>
+		<script type="text/javascript">
 		window.onerror = function(m, u, l) {
 			// console.log('Error message: '+m+'\nURL: '+u+'\nLine Number: '+l);
 			if (encodeURIComponent) {

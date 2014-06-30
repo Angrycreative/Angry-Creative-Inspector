@@ -110,9 +110,10 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function add($routine, $options = array(), $action = "ac_inspection", $priority = 10, $accepted_args = 1) {
 
-			$inspection_method = self::get_inspection_method($routine);
+			$inspection_method = self::get_inspection_method($routine, $options);
 
 			if ( !$inspection_method ) {
+				var_dump($routine);
 				return false;
 			}
 
