@@ -9,17 +9,23 @@ class ACI_Routine_Log_JS_Errors {
 		$options = array( 'log_level' => self::LOG_LEVEL,
 						  'inspection_method' => 'setup' );
 		
-		aci_register_routine( __CLASS__, $options, 'init' );
-		aci_register_routine( __CLASS__, $options, 'admin-init' );
+		if (is_admin()) {
+			aci_register_routine( __CLASS__, $options, 'admin-init' );
+		} else {
+			aci_register_routine( __CLASS__, $options, 'init' );
+		}
 
 	}
 
 	public static function setup() {
 
 		// Add our js to the head of the page, i.e. as early as possible
-		add_action("wp_head", array( __CLASS__, "add_js_to_header" ), 1 );
-		add_action("admin_head", array( __CLASS__, "add_js_to_header" ), 1 );
-
+		if (is_admin()) {
+			add_action("admin_head", array( __CLASS__, "add_js_to_header" ), 1 );
+		} else {
+			add_action("wp_head", array( __CLASS__, "add_js_to_header" ), 1 );
+		}
+		
 		// Add ajax action
 		add_action('wp_ajax_log_js_error', array( __CLASS__, "log_error"), 1 );
 		add_action('wp_ajax_nopriv_log_js_error', array( __CLASS__, "log_error"), 1 );

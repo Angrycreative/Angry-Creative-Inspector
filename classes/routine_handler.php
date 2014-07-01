@@ -113,7 +113,6 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			$inspection_method = self::get_inspection_method($routine, $options);
 
 			if ( !$inspection_method ) {
-				var_dump($routine);
 				return false;
 			}
 
@@ -135,14 +134,14 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				return false;
 			}
 
-			if ( !empty( $options ) ) {
+			$saved_options = self::get_options( $routine );
 
-				$saved_options = self::get_options( $routine );
-
-				if ( empty( $saved_options ) ) {
+			if ( !empty( $options ) && empty( $saved_options ) ) {
 					self::set_options( $routine, $options );
-				}
+			}
 
+			if ( $saved_options['log_level'] == 'ignore' ) {
+				return true;
 			}
 
 			add_action( $action, $inspection_method, $priority, $accepted_args );
