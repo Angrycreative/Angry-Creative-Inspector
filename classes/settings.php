@@ -354,6 +354,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 			foreach( array_keys($routines) as $routine ) { 
 
 				$routine_settings = ACI_Routine_Handler::get_options($routine);
+
 	            $new_routine_settings = $input[$routine];
 
 	            foreach($routine_settings as $opt => $val) {
@@ -420,22 +421,57 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	    	$log_levels = AC_Inspector::get_log_levels();
 	    	$routine_settings = ACI_Routine_Handler::get_options($routine);
 
-			?>
+	    	if ( $routine_settings['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
 
-			<tr valign="top">
-			    <td scope="row">Log level</td>
-			    <td>
-					<select id="<?php echo $routine; ?>_log_level" name="aci_options[<?php echo $routine; ?>][log_level]">
-						<?php foreach( $log_levels as $level ) { ?>
+				global $wpdb;
+				$site_blog_ids = $wpdb->get_col("SELECT blog_id FROM ".$wpdb->prefix."blogs");
 
-							<option value="<?php echo $level; ?>"<?php echo ($level == $routine_settings['log_level']) ? " selected" : ""; ?>><?php echo ucfirst($level); ?></option>
+				if (is_array($site_blog_ids)) {
 
-						<?php } ?>
-					</select>
-			    </td>
-			</tr>
+					foreach( $site_blog_ids AS $site_blog_id ) {
 
-			<?php
+						$sitename = get_blog_details( $site_blog_id )->blogname;
+
+				    	?>
+
+						<tr valign="top">
+						    <td scope="row" valign="top" style="vertical-align: top;">Log level on <?php echo $sitename; ?></td>
+						    <td>
+				        		<select id="<?php echo $routine; ?>_<?php echo $site_blog_id; ?>_log_level" name="aci_options[<?php echo $routine; ?>][<?php echo $site_blog_id; ?>][log_level]">
+									<?php foreach( $log_levels as $level ) { ?>
+
+										<option value="<?php echo $level; ?>"<?php echo ($level == $routine_settings[$site_blog_id]['log_level']) ? " selected" : ""; ?>><?php echo ucfirst($level); ?></option>
+
+									<?php } ?>
+								</select>
+							</td>
+						</tr>
+
+						<?php
+
+					}
+				}
+
+			} else {
+
+				?>
+
+				<tr valign="top">
+				    <td scope="row">Log level</td>
+				    <td>
+						<select id="<?php echo $routine; ?>_log_level" name="aci_options[<?php echo $routine; ?>][log_level]">
+							<?php foreach( $log_levels as $level ) { ?>
+
+								<option value="<?php echo $level; ?>"<?php echo ($level == $routine_settings['log_level']) ? " selected" : ""; ?>><?php echo ucfirst($level); ?></option>
+
+							<?php } ?>
+						</select>
+				    </td>
+				</tr>
+
+				<?php
+
+			}
 
 			do_action($routine.'_settings_field', $routine_settings, $args);
 

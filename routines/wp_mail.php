@@ -11,5 +11,5 @@ function aci_log_wp_mail($mail) {
 
 }
 
-$options = array('log_level' => 'warning');
-aci_register_routine("aci_log_wp_mail", $options, "wp_mail");
+$options = array('log_level' => 'notice');
+// aci_register_routine("aci_log_wp_mail", $options, "wp_mail");

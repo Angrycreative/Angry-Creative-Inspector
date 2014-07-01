@@ -234,7 +234,7 @@ if(!class_exists('AC_Inspector')) {
 		/* 
 			Main log function that does the actual output
 		*/
-		public static function log($message, $routine = '') {
+		public static function log($message, $routine = '', $site_id = '') {
 
 			$log_level = '';
 
@@ -242,8 +242,15 @@ if(!class_exists('AC_Inspector')) {
 
 				$routine_options = ACI_Routine_Handler::get_options($routine);
 
-				if (is_array($routine_options) && isset($routine_options['log_level'])) {
-					$log_level = $routine_options['log_level'];
+				if (is_array($routine_options)) {
+					if ( $routine_options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+						$site_id = ( is_numeric($site_id) ) ? $site_id : 1;
+						if (is_array($routine_options[$site_id]) && isset($routine_options[$site_id]['log_level'])) {
+							$log_level = $routine_options[$site_id]['log_level'];
+						}
+					} else if (isset($routine_options['log_level'])) {
+						$log_level = $routine_options['log_level'];
+					}
 				}
 
 			}

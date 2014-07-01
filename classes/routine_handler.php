@@ -20,7 +20,6 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$routine_option_key = $routine . "_options";
 
-			// Make sure the key is prefixed
 			$prefix = substr($routine, 0, 4);
 			if ($prefix != "aci_") {
 				$routine_option_key = "aci_" . $routine_option_key;
@@ -94,7 +93,37 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$options_key = self::routine_options_key($routine);
 
-			return AC_Inspector::get_option($options_key);
+			$options = AC_Inspector::get_option($options_key);
+
+			if ( $options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+
+				global $wpdb;
+				$site_blog_ids = $wpdb->get_col("SELECT blog_id FROM ".$wpdb->prefix."blogs");
+
+				if (is_array($site_blog_ids)) {
+
+					$global_opt_keys = array_keys($options);
+
+					foreach( $site_blog_ids AS $site_blog_id ) {
+
+						if ( !is_array($options[$site_blog_id]) ) {
+							$options[$site_blog_id] = array();
+						}
+
+						foreach($global_opt_keys as $global_opt_key ) {
+
+							if ( !is_numeric($global_opt_key) && $global_opt_key != 'site_specific_settings' && !isset($options[$site_blog_id][$global_opt_key]) ) {
+								$options[$site_blog_id][$global_opt_key] = $options[$global_opt_key];
+							}
+
+						}
+					}
+
+				}
+
+			}
+
+			return $options;
 
 		}
 
@@ -136,11 +165,25 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$saved_options = self::get_options( $routine );
 
-			if ( !empty( $options ) && empty( $saved_options ) ) {
+			if ( is_array($options) && !empty( $options ) ) {
+				if ( is_array($saved_options) ) {
+					foreach( $saved_options as $opt_key => $saved_val ) {
+						if ( !isset($options[$opt_key]) || $options[$opt_key] != $saved_val ) {
+							$options[$opt_key] = $saved_val;
+						}
+					}
+				}
+				if ( !is_array($saved_options) || ( count($options) != count($saved_options) ) ) {
 					self::set_options( $routine, $options );
+				}
 			}
 
-			if ( $saved_options['log_level'] == 'ignore' ) {
+			if ( $options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+				$current_site_id = get_current_blog_id();
+				if ($options[$current_site_id]['log_level'] == 'ignore') {
+					return true;
+				}
+			} else if ( $options['log_level'] == 'ignore' ) {
 				return true;
 			}
 
