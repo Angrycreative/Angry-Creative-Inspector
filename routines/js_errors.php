@@ -77,7 +77,7 @@ class ACI_Routine_Log_JS_Errors {
 			$full_msg .= ", column " . $col . ".";
 		} 
 
-		if ( !empty($ua) ) {
+		if ( !empty($r) ) {
 			$full_msg .= " | Requested URI: " . $r;
 		} 
 
