@@ -29,12 +29,21 @@ class ACI_Routine_Log_JS_Errors {
 	public static function add_js_to_header() {
 		?>
 		<script type="text/javascript">
-		window.onerror = function(m, u, l) {
+		window.onerror = function(errorMsg, url, lineNumber, column, errorObj) {
 			// console.log('Error message: '+m+'\nURL: '+u+'\nLine Number: '+l);
 			if (encodeURIComponent) {
 				var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>',
-					img = new Image(1,1);
-				img.src = ajaxurl + "?action=log_js_error&m=" + encodeURIComponent(m) + "&u=" + encodeURIComponent(u) + "&l=" + encodeURIComponent(l);
+				requri = '<?php echo $_SERVER['REQUEST_URI']; ?>',
+				img = new Image(1,1);
+				img.src = ajaxurl + 
+						  "?action=log_js_error&m=" + 
+						  encodeURIComponent(errorMsg) + 
+						  "&u=" + encodeURIComponent(url) + 
+						  "&l=" + encodeURIComponent(lineNumber) + 
+						  "&c=" + encodeURIComponent(column) + 
+						  "&r=" + encodeURIComponent(requri) + 
+						  "&ua=" + encodeURIComponent(navigator.userAgent) +
+						  "&e=" + encodeURIComponent(errorObj);
 			}
 			return true;
 		}
@@ -47,8 +56,38 @@ class ACI_Routine_Log_JS_Errors {
 		$msg = isset( $_GET["m"] ) ? $_GET["m"] : "";
 		$url = isset( $_GET["u"] ) ? $_GET["u"] : "";
 		$line = isset( $_GET["l"] ) ? $_GET["l"] : "";
+		$col = isset( $_GET["c"] ) ? $_GET["c"] : "";
+		$r = isset( $_GET["r"] ) ? $_GET["r"] : "";
+		$ua = isset( $_GET["ua"] ) ? $_GET["ua"] : "";
+		$err = isset( $_GET["e"] ) ? $_GET["e"] : "";
 
-		$full_msg = $msg . " on " . $url . ":" . $line;
+		if ( strpos( $msg, ':' ) !== false ) {
+			$msg = trim( substr( $msg, strpos( $msg, ':' ) + 1 ) );
+		}
+
+		$url = str_replace( home_url(), '', $url );
+
+		$full_msg = "JS Error: " . $msg . " on " . $url;
+
+		if ( !empty($line) ) {
+		 	$full_msg .= ", line " . $line;
+		}
+
+		if ( !empty($col) ) {
+			$full_msg .= ", column " . $col . ".";
+		} 
+
+		if ( !empty($ua) ) {
+			$full_msg .= " | Requested URI: " . $r;
+		} 
+
+		if ( !empty($ua) ) {
+			$full_msg .= " | User Agent: " . $ua;
+		} 
+
+		if ( !empty($err) ) {
+			$full_msg .= " | Stacktrace: " . $err;
+		} 
 
 		AC_Inspector::log( $full_msg, __CLASS__ );
 

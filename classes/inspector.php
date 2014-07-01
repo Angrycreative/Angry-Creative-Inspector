@@ -259,8 +259,8 @@ if(!class_exists('AC_Inspector')) {
 
 				if (is_array($message) || is_object($message)) {
 
-	            	error_log( $output );
-					error_log( print_r( $message, true ) . "\n", 3, self::$log_path); 
+	            	error_log( $output, 3, self::$log_path );
+					error_log( print_r( $message, true ) . "\n", 3, self::$log_path ); 
 
 	        	} else {
 

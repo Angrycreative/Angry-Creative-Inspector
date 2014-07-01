@@ -85,6 +85,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
     			return;
     		}
 
+    		wp_enqueue_style('aci-main-style', plugins_url('css/main.css', ACI_PLUGIN_FILE), array(), '20140701');
+
     		wp_enqueue_style('aci-tabs-style', plugins_url('css/tabs.css', ACI_PLUGIN_FILE), array(), '20140115');
 
 	        wp_enqueue_script('aci-tabs-script', plugins_url('js/tabs.js', ACI_PLUGIN_FILE), array('jquery-ui-tabs'), '20140115', true);
@@ -159,7 +161,20 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 										echo '<ul>';
 										foreach ($lines as $line) {
-											echo '<li>' . $line . '</li>'; 
+											echo '<li>';
+											if (strpos($line, '|') !== false) {
+												$sublines = array_map('trim', explode('|', $line));
+												$firstline = array_splice($sublines, 0, 1);
+												echo $firstline[0];
+												echo '<ul>';
+												foreach ($sublines as $subline) {
+													echo '<li>' . $subline . '</li>';
+												}
+												echo '</ul>';
+											} else {
+												echo $line; 
+											}
+											echo '</li>';
 										} 
 
 										echo '</ul>'; 
