@@ -11,7 +11,7 @@ class ACI_Routine_Check_Site_Visibility {
 	public static function register() {
 
 		$options = array( 'log_level' => self::LOG_LEVEL,
-						  'site_specific_settings' => true );
+						  'site_specific_settings' => 0 );
 		
 		aci_register_routine( __CLASS__, $options );
 

@@ -7,7 +7,9 @@ class ACI_Routine_Log_JS_Errors {
 	public static function register() {
 
 		$options = array( 'log_level' => self::LOG_LEVEL,
-						  'inspection_method' => 'setup' );
+						  'inspection_method' => 'setup',
+						  'site_specific_settings' => 0,
+						  'description' => 'This routine tries to catch and log javascript errors. Please note that it may not always be able to.' );
 		
 		if (is_admin()) {
 			aci_register_routine( __CLASS__, $options, 'admin-init' );
@@ -25,7 +27,7 @@ class ACI_Routine_Log_JS_Errors {
 		} else {
 			add_action("wp_head", array( __CLASS__, "add_js_to_header" ), 1 );
 		}
-		
+
 		// Add ajax action
 		add_action('wp_ajax_log_js_error', array( __CLASS__, "log_error"), 1 );
 		add_action('wp_ajax_nopriv_log_js_error', array( __CLASS__, "log_error"), 1 );

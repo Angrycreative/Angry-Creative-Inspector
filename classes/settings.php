@@ -1,8 +1,8 @@
 <?php
 /*
 Class name: ACI Settings
-Version: 0.2.1
-Depends: AC Inspector 0.4.x
+Version: 0.3.0
+Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -113,7 +113,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	    		<?php screen_icon(); ?>
 
-			    <h2>AC Inspector</h2>	
+			    <h2>Angry Creative Inspector <small>Version <?php echo ACI_PLUGIN_VERSION; ?> by <a href="http://angrycreative.se">Angry Creative AB</a></small></h2>	
 
 				<div id="aci-tabs" class="ui-tabs ui-widget ui-widget-content ui-corner-all">
 
@@ -121,7 +121,11 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 				    	<li id="tab-button-inspection-log" class="ui-state-default ui-corner-top ui-tabs-active ui-state-active" role="tab" tabindex="0" aria-controls="section-inspection-log" aria-labelledby="ui-id-1" aria-selected="true"><a href="#section-inspection-log" title="Inspection Log" class="ui-tabs-anchor" role="presentation" tabindex="-1" id="ui-id-1">Inspection Log</a></li>
 
-				    	<li id="tab-button-settings" class="ui-state-default ui-corner-top" role="tab" tabindex="0" aria-controls="section-settings" aria-labelledby="ui-id-2" aria-selected="false"><a href="#section-settings" title="Settings" class="ui-tabs-anchor" role="presentation" tabindex="-2" id="ui-id-2">Settings</a></li>
+				    	<li id="tab-button-general" class="ui-state-default ui-corner-top" role="tab" tabindex="1" aria-controls="section-general" aria-labelledby="ui-id-2" aria-selected="false"><a href="#section-general" title="General Settings" class="ui-tabs-anchor" role="presentation" tabindex="-2" id="ui-id-2">General Settings</a></li>
+
+				    	<li id="tab-button-inspections" class="ui-state-default ui-corner-top" role="tab" tabindex="2" aria-controls="section-inspections" aria-labelledby="ui-id-3" aria-selected="false"><a href="#section-inspections" title="Inspection Routines" class="ui-tabs-anchor" role="presentation" tabindex="-3" id="ui-id-3">Inspection Routines</a></li>
+
+				    	<li id="tab-button-actions" class="ui-state-default ui-corner-top" role="tab" tabindex="3" aria-controls="section-actions" aria-labelledby="ui-id-4" aria-selected="false"><a href="#section-actions" title="Action Routines" class="ui-tabs-anchor" role="presentation" tabindex="-4" id="ui-id-4">Action Routines</a></li>
 
 				    </ul>
 
@@ -193,13 +197,41 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
         				</div>
         			</div>
 
-        			<div id="section-settings" class="aci-section ui-tabs-panel ui-widget-content ui-corner-bottom" aria-labelledby="ui-id-2" role="tabpanel" aria-expanded="false" aria-hidden="true" style="display: none;">
+        			<div id="section-general" class="aci-section ui-tabs-panel ui-widget-content ui-corner-bottom" aria-labelledby="ui-id-2" role="tabpanel" aria-expanded="false" aria-hidden="true" style="display: none;">
         				<div class="aci-section-content ui-tabs-panel-content">
 
 		        			<form method="post" action="<?php echo self::$_plugin_actions_url; ?>">
 						        <?php
 							    	settings_fields( 'ac-inspector' );	
-							    	do_settings_sections( 'ac-inspector' );
+							    	$this->do_settings_section( 'ac-inspector', 'aci_general_options' );
+						        	submit_button(); 
+						        ?>
+						    </form>
+	        
+	        			</div>
+        			</div>
+
+        			<div id="section-inspections" class="aci-section ui-tabs-panel ui-widget-content ui-corner-bottom" aria-labelledby="ui-id-3" role="tabpanel" aria-expanded="false" aria-hidden="true" style="display: none;">
+        				<div class="aci-section-content ui-tabs-panel-content">
+
+		        			<form method="post" action="<?php echo self::$_plugin_actions_url; ?>">
+						        <?php
+							    	settings_fields( 'ac-inspector' );	
+							    	$this->do_settings_section( 'ac-inspector', 'aci_inspection_routine_settings' );
+						        	submit_button(); 
+						        ?>
+						    </form>
+	        
+	        			</div>
+        			</div>
+
+        			<div id="section-actions" class="aci-section ui-tabs-panel ui-widget-content ui-corner-bottom" aria-labelledby="ui-id-4" role="tabpanel" aria-expanded="false" aria-hidden="true" style="display: none;">
+        				<div class="aci-section-content ui-tabs-panel-content">
+
+		        			<form method="post" action="<?php echo self::$_plugin_actions_url; ?>">
+						        <?php
+							    	settings_fields( 'ac-inspector' );	
+							    	$this->do_settings_section( 'ac-inspector', 'aci_wp_hook_routine_settings' );
 						        	submit_button(); 
 						        ?>
 						    </form>
@@ -230,7 +262,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
    
 	        add_settings_section(
 	            'aci_general_options',
-	            'General',
+	            'General Settings',
 	            array( $this, 'print_general_settings_info' ),
 	            'ac-inspector'
 	        );	
@@ -292,7 +324,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	            
 		        add_settings_section(
 		            'aci_wp_hook_routine_settings',
-		            'Routines on WP Hooks',
+		            'Routines on WP Action/Filter Hooks',
 		            array( $this, 'print_wp_hook_routine_settings_info' ),
 		            'ac-inspector'
 		        );	
@@ -421,7 +453,30 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	    	$log_levels = AC_Inspector::get_log_levels();
 	    	$routine_settings = ACI_Routine_Handler::get_options($routine);
 
-	    	if ( $routine_settings['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+	    	if ( !empty($routine_settings['description']) ) { ?>
+
+	    		<tr valign="top">
+				    <td colspan="2" class="description-row" scope="row" valign="top"><div class="howto"><?php echo $routine_settings['description']; ?></div></td>
+				</tr>
+
+	    	<?php }
+
+	    	if ( isset($routine_settings['site_specific_settings']) && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) { ?>
+
+	    		<tr valign="top">
+				    <td scope="row" valign="top">Site specific settings</td>
+				    <td>
+		        		<select id="<?php echo $routine; ?>_site_specific_settings" name="aci_options[<?php echo $routine; ?>][site_specific_settings]">
+							<option value="1"<?php echo ($routine_settings['site_specific_settings']) ? " selected" : ""; ?>>Yes</option>
+							<option value="0"<?php echo ($routine_settings['site_specific_settings']) ? "" : " selected"; ?>>No</option>
+						</select>
+						<div class="howto">Submit your settings to enable/disable site-specific settings</div>
+					</td>
+				</tr>
+
+	    	<?php }
+
+		    if ( $routine_settings['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
 
 				global $wpdb;
 				$site_blog_ids = $wpdb->get_col("SELECT blog_id FROM ".$wpdb->prefix."blogs");
@@ -435,7 +490,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 				    	?>
 
 						<tr valign="top">
-						    <td scope="row" valign="top" style="vertical-align: top;">Log level on <?php echo $sitename; ?></td>
+						    <td scope="row" valign="top">Log level on <?php echo $sitename; ?></td>
 						    <td>
 				        		<select id="<?php echo $routine; ?>_<?php echo $site_blog_id; ?>_log_level" name="aci_options[<?php echo $routine; ?>][<?php echo $site_blog_id; ?>][log_level]">
 									<?php foreach( $log_levels as $level ) { ?>
@@ -476,6 +531,33 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 			do_action($routine.'_settings_field', $routine_settings, $args);
 
 	    }
+
+	    public function do_settings_section( $page, $section ) {
+
+	        global $wp_settings_sections, $wp_settings_fields;
+	
+	        if ( ! isset( $wp_settings_sections[$page] ) )
+	                return;
+
+	        if ( ! isset( $wp_settings_sections[$page][$section] ) )
+	                return;
+	
+	        $section = $wp_settings_sections[$page][$section];
+
+            if ( $section['title'] )
+                    echo "<h3>{$section['title']}</h3>\n";
+
+            if ( $section['callback'] )
+                    call_user_func( $section['callback'], $section );
+
+            if ( ! isset( $wp_settings_fields ) || !isset( $wp_settings_fields[$page] ) || !isset( $wp_settings_fields[$page][$section['id']] ) )
+                    continue;
+
+            echo '<table class="form-table">';
+            do_settings_fields( $page, $section['id'] );
+            echo '</table>';
+
+		}	
 
 	}
 

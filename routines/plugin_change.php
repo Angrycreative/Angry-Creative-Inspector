@@ -20,6 +20,7 @@ function aci_log_plugin_change($plugin){
 
 }
 
-$options = array('log_level' => 'warning');
+$options = array('log_level' => 'warning',
+				 'site_specific_settings' => 0 );
 aci_register_routine("aci_log_plugin_change", $options, "activate_plugin");
 aci_register_routine("aci_log_plugin_change", $options, "deactivate_plugin");

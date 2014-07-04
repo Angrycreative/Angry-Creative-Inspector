@@ -1,4 +1,23 @@
-#section-inspection-log .aci-section-content ul li ul {
+#aci-settings-wrap h2 small {
+	font-size: 13px;
+	color: #777;
+	margin-left: 10px;
+}
+
+#aci-settings-wrap .aci-section-content .form-table td {
+	vertical-align: top; 
+}
+
+#aci-settings-wrap .aci-section-content .form-table td.description-row {
+	padding-top:0;
+}
+
+#aci-settings-wrap .aci-section-content .howto {
+	display: inline-block;
+	margin-left: 6px;
+}
+
+#aci-settings-wrap #section-inspection-log .aci-section-content ul li ul {
 	margin-top: 6px;
 	margin-left: 40px;
 }

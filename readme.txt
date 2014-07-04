@@ -1,9 +1,9 @@
-=== Plugin Name ===
+=== Angry Inspector ===
 Contributors: ac-robin, samface, angrycreative 
 Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
 Requires at least: 3.0.1
 Tested up to: 3.9.1
-Stable tag: 0.4.2
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,12 @@ Inspects and logs possible issues with your Wordpress installation.
 3. Make sure the right log file path is set under the 'Settings/AC Inspector' menu in Wordpress
 
 == Changelog ==
+
+= 0.5.x =
+* New routine for logging javascript errors
+* New routine for logging user capability changes
+* Added the abilitity to make site specific settings on multisite installations
+* Improved administration interface
 
 = 0.4.x =
 * New routine with git support for checking file system changes
