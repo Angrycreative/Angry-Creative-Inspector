@@ -23,6 +23,8 @@ class ACI_Log_User_Capability_Change {
 		"revoke_super_admin" => array('user_id')
 	);
 
+	private static $_super_user_cap_changes = array();
+
 	public static function register() {
 
 		$options = array( 'log_level' => self::LOG_LEVEL,
@@ -55,11 +57,19 @@ class ACI_Log_User_Capability_Change {
 
 			if ( strpos( $meta_key, '_capabilities' ) ) {
 
-				$new_caps = array_filter( (array) $meta_value );
+				if ( !is_super_admin( $object_id ) ) {
 
-				if ( "delete_user_meta" == self::$_current_filter || !empty( $new_caps ) ) {
+					$new_caps = array_filter( (array) $meta_value );
 
-					self::_log_capability_change( $object_id, $new_caps );
+					if ( "delete_user_meta" == self::$_current_filter || !empty( $new_caps ) ) {
+
+						self::_log_capability_change( $object_id, $new_caps );
+
+					}
+
+				} else {
+
+					self::_log_super_user_cap_change( $object_id );
 
 				}
 
@@ -168,6 +178,26 @@ class ACI_Log_User_Capability_Change {
 		}
 
 		AC_Inspector::log( $message, __CLASS__ );
+
+	}
+
+	private static function _log_super_user_cap_change( $user_id ) {
+
+		$current_user = wp_get_current_user();
+		$changed_user = get_user_by( 'id', $user_id );
+
+		if ( !is_array( self::$_super_user_cap_changes[$current_user->ID] ) ) {
+			self::$_super_user_cap_changes[$current_user->ID] = array();
+		}
+
+		if (!in_array($changed_user->ID, self::$_super_user_cap_changes[$current_user->ID])) {
+
+			$message = "Meaningless change of capabilities on super user " . $changed_user->display_name. ' (' . $changed_user->user_login . ') by ' . $current_user->display_name. ' (' . $current_user->user_login . ')';
+			AC_Inspector::log( $message, __CLASS__ );
+
+			self::$_super_user_cap_changes[$current_user->ID][] = $changed_user->ID;
+
+		}
 
 	}
 

@@ -16,23 +16,34 @@ class ACI_Routine_Log_Plugin_Change {
 								  'description' => self::DESCRIPTION,
 								  'site_specific_settings' => 0 );
 		
-		aci_register_routine( __CLASS__, $default_options, "activate_plugin" );
-		aci_register_routine( __CLASS__, $default_options, "deactivate_plugin" );
+		aci_register_routine( __CLASS__, $default_options, "activate_plugin", 10, 1 );
+		aci_register_routine( __CLASS__, $default_options, "deactivate_plugin", 10, 1 );
 
 	}
 
-	public static function inspect() {
+	public static function inspect( $plugin ) {
 
 		$user = wp_get_current_user();
 		$site = (is_multisite()) ? ' on "' . get_blog_details(get_current_blog_id())->blogname . '"' : '';
 		$usermsg = ($user instanceof WP_User) ? ' (user: '.$user->user_login.')' : '';
-		$status = (current_filter() == 'activate_plugin') ? 'activated' : 'deactivated';
 
-		$plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' .$plugin);
+		switch( current_filter() ) {
+			case 'activate_plugin':
+				$status = 'activated';
+				break;
+			case 'deactivate_plugin':
+				$status = 'deactivated';
+				break;
+		}
 
-		$message = 'Plugin "'.$plugin_data['Name']. '" was ' . $status . $usermsg . $site;
+		if ( !empty($status) ) {
+			
+			$plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' .$plugin);
+			$message = 'Plugin "'.$plugin_data['Name']. '" was ' . $status . $usermsg . $site;
 
-		AC_Inspector::log( $message, __CLASS__ );
+			AC_Inspector::log( $message, __CLASS__ );
+
+		}
 
 		return "";
 

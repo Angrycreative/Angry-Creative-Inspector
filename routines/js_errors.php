@@ -14,7 +14,7 @@ class ACI_Routine_Log_JS_Errors {
 						  'site_specific_settings' => 0 );
 		
 		if (is_admin()) {
-			aci_register_routine( __CLASS__, $options, 'admin-init' );
+			aci_register_routine( __CLASS__, $options, 'admin_init' );
 		} else {
 			aci_register_routine( __CLASS__, $options, 'init' );
 		}

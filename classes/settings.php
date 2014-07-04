@@ -153,7 +153,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 											   	array_push($lines, $line);
 
-											   	if (count($lines)>15) {
+											   	if (count($lines)>25) {
 											       array_shift($lines);
 											    }
 
