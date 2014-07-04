@@ -24,8 +24,10 @@ Inspects and logs possible issues with your Wordpress installation.
 = 0.5.x =
 * New routine for logging javascript errors
 * New routine for logging user capability changes
+* Revised and much improved routine for checking file write permissions
 * Added the abilitity to make site specific settings on multisite installations
 * Improved administration interface
+* Various bugfixes and code refactoring
 
 = 0.4.x =
 * New routine with git support for checking file system changes

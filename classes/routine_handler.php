@@ -165,6 +165,10 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$saved_options = self::get_options( $routine );
 
+			if ( isset( $saved_options['description'] ) && ( !isset($options['description']) || $saved_options['description'] != $options['description'] ) ) {
+				unset( $saved_options['description'] );
+			}
+
 			if ( is_array($options) && !empty( $options ) ) {
 				if ( is_array($saved_options) ) {
 					foreach( $saved_options as $opt_key => $saved_val ) {

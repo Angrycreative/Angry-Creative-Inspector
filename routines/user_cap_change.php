@@ -6,7 +6,9 @@
 
 class ACI_Log_User_Capability_Change {
 
-	const LOG_LEVEL = 'notice';
+	const LOG_LEVEL = "notice";
+
+	const DESCRIPTION = "Logs every time a user's role or capabilities has been changed.";
 
 	private static $_current_filter = "";
 
@@ -23,7 +25,8 @@ class ACI_Log_User_Capability_Change {
 
 	public static function register() {
 
-		$options = array( 'log_level' => self::LOG_LEVEL ,
+		$options = array( 'log_level' => self::LOG_LEVEL,
+						  'description' => self::DESCRIPTION,
 						  'site_specific_settings' => 0 );
 
 		foreach(array_keys(self::$_user_meta_action_args) as $action) {
@@ -141,7 +144,7 @@ class ACI_Log_User_Capability_Change {
 
 			$message .= ' by ' . $current_user->display_name. ' (' . $current_user->user_login . ')';
 
-			AC_Inspector::log($message, __CLASS__);
+			AC_Inspector::log( $message, __CLASS__ );
 
         }
 
@@ -164,7 +167,7 @@ class ACI_Log_User_Capability_Change {
 
 		}
 
-		AC_Inspector::log($message, __CLASS__);
+		AC_Inspector::log( $message, __CLASS__ );
 
 	}
 

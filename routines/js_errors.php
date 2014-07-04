@@ -2,14 +2,16 @@
 
 class ACI_Routine_Log_JS_Errors {
 
-	const LOG_LEVEL = 'warning';
+	const LOG_LEVEL = "warning";
+
+	const DESCRIPTION = "Tries to catch and log javascript errors. Please note that it may not always be able to.";
 
 	public static function register() {
 
 		$options = array( 'log_level' => self::LOG_LEVEL,
+						  'description' => self::DESCRIPTION,
 						  'inspection_method' => 'setup',
-						  'site_specific_settings' => 0,
-						  'description' => 'This routine tries to catch and log javascript errors. Please note that it may not always be able to.' );
+						  'site_specific_settings' => 0 );
 		
 		if (is_admin()) {
 			aci_register_routine( __CLASS__, $options, 'admin-init' );

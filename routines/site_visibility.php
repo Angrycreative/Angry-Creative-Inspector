@@ -6,11 +6,14 @@
 
 class ACI_Routine_Check_Site_Visibility {
 
-	const LOG_LEVEL = 'warning';
+	const LOG_LEVEL = "warning";
+
+	const DESCRIPTION = "Checks if your site(s) is blocking search engines.";
 
 	public static function register() {
 
 		$options = array( 'log_level' => self::LOG_LEVEL,
+						  'description' => self::DESCRIPTION,
 						  'site_specific_settings' => 0 );
 		
 		aci_register_routine( __CLASS__, $options );

@@ -8,17 +8,19 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 
 		const LOG_LEVEL = 'warning';
 
+		const DESCRIPTION = "Detects uncommited file changes in the site's Git-repository.";
+
 		private static $_default_ignore_files = array('wp-content/uploads/*');
 
 		public static function register() {
 
 			$options = array( 'log_level' => self::LOG_LEVEL, 
+							  'description' => self::DESCRIPTION,
 							  'ignore_files' => self::$_default_ignore_files );
 			
 			aci_register_routine( __CLASS__, $options );
 
 			add_action( __CLASS__.'_settings_field', array( __CLASS__, 'settings_field' ), 10, 2 );
-
 			add_filter( __CLASS__.'_settings',  array( __CLASS__, 'settings' ), 10, 1 );
 
 		}
