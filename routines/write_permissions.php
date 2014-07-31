@@ -7,27 +7,57 @@ class ACI_Routine_Check_Write_Permissions {
 
 	const LOG_LEVEL = 'warning';
 
+	const DESCRIPTION = 'Checks wether your web server has the appropriate write permissions.';
+
 	private static $_default_allowed_dirs = array(
-		'wp-content/uploads/*'
+		'wp-content/uploads/*',
+		'wp-content/plugins/*',
+		'wp-content/themes/*',
+		'wp-content/languages/*',
 	);
+
+	private static $_force_default_allowed_dirs = false;
 
 	private static $_options = array();
 
-	public static function register() {
+	private static $_instantiated = false;
+
+	public static function preload() {
 
 		if ( defined('DISALLOW_FILE_MODS') && true == DISALLOW_FILE_MODS ) {
 			self::$_default_allowed_dirs = array( 'wp-content/uploads/*' );
+			self::$_force_default_allowed_dirs = true;
 		} 
 
 		if ( defined('FS_METHOD') && 'direct' == FS_METHOD ) {
 			self::$_default_allowed_dirs = array( '/*' );
-		} 
+			self::$_force_default_allowed_dirs = true;
+		}
 
-		$default_options = array( 'log_level' => self::LOG_LEVEL, 
-						  		  'allowed_dirs' => self::$_default_allowed_dirs ,
-						  		  'description' => "Checks wether your web server has the appropriate write permissions.");
+	}
+
+	public static function register() {
+
+		self::preload();
+
+		$reg_options = array( 'log_level' => self::LOG_LEVEL, 
+					  		  'allowed_dirs' => self::$_default_allowed_dirs,
+					  		  'description' => self::DESCRIPTION );
 		
-		aci_register_routine( __CLASS__, $default_options );
+		aci_register_routine( __CLASS__, $reg_options );
+
+		self::setup();
+
+		if ( !self::$_force_default_allowed_dirs ) {
+
+			add_action( __CLASS__.'_settings_field', array( __CLASS__, 'settings_field' ), 10, 2 );
+			add_filter( __CLASS__.'_settings',  array( __CLASS__, 'settings' ), 10, 1 );
+
+		}
+
+	}
+
+	public static function setup() {
 
 		self::$_options = ACI_Routine_Handler::get_options( __CLASS__ );
 
@@ -35,14 +65,16 @@ class ACI_Routine_Check_Write_Permissions {
         	self::$_options = array();
         }
 
-		if ( !is_array( self::$_options['allowed_dirs'] ) ) {
-			self::$_options['allowed_dirs'] = array();
-		}
+		if ( self::$_force_default_allowed_dirs ) {
 
-		if ( ( !defined('DISALLOW_FILE_MODS') || false == DISALLOW_FILE_MODS ) && ( !defined('FS_METHOD') || 'direct' != FS_METHOD ) ) {
 			self::$_options['allowed_dirs'] = self::$_default_allowed_dirs;
-			add_action( __CLASS__.'_settings_field', array( __CLASS__, 'settings_field' ), 10, 2 );
-			add_filter( __CLASS__.'_settings',  array( __CLASS__, 'settings' ), 10, 1 );
+
+		} else {
+
+			if ( !is_array( self::$_options['allowed_dirs'] ) || empty( self::$_options['allowed_dirs'] ) ) {
+				self::$_options['allowed_dirs'] = self::$_default_allowed_dirs;
+			}
+
 		}
 
 	}
@@ -140,6 +172,10 @@ class ACI_Routine_Check_Write_Permissions {
 
 		$routine = $args['routine'];
 
+		if ( empty( $options['allowed_dirs'] ) || self::$_force_default_allowed_dirs ) {
+			$options['allowed_dirs'] = self::$_default_allowed_dirs;
+		}
+
     	?>
 
 		<tr valign="top">
@@ -156,7 +192,11 @@ class ACI_Routine_Check_Write_Permissions {
 
 	public static function settings( $options ) {
 
-		if ( !empty( $options['allowed_dirs'] ) && false != strpos( $options['allowed_dirs'], "\n" ) ) {
+		if ( empty( $options['allowed_dirs'] ) || self::$_force_default_allowed_dirs ) {
+			$options['allowed_dirs'] = self::$_default_allowed_dirs;
+		}
+
+		if ( false != strpos( $options['allowed_dirs'], "\n" ) ) {
 			$options['allowed_dirs'] = array_map('trim', explode("\n", $options['allowed_dirs']));
 		}
 
