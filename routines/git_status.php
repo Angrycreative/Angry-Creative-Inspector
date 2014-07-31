@@ -111,7 +111,7 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 			<tr valign="top">
 			    <td scope="row" valign="top" style="vertical-align: top;">Ignore files</td>
 			    <td>
-	        		<textarea cols="45" rows="5" name="aci_options[<?php echo $routine; ?>][ignore_files]" type="checkbox" id="aci_options_<?php echo $routine; ?>_ignore_files"><?php echo implode("\n", $options['ignore_files']); ?></textarea>
+	        		<textarea cols="45" rows="5" name="aci_options[<?php echo $routine; ?>][ignore_files]" type="checkbox" id="aci_options_<?php echo $routine; ?>_ignore_files"><?php echo implode("\n", (array) $options['ignore_files']); ?></textarea>
 	        		<p class="description">Enter a list of files to ignore, seperated by line breaks.</p>
 				</td>
 			</tr>
@@ -122,7 +122,9 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 
 		public static function settings( $options ) {
 
-			$options['ignore_files'] = array_map('trim', explode("\n", $options['ignore_files']));
+			if ( !empty( $options['ignore_files'] ) && false != strpos( $options['ignore_files'], "\n" ) ) {
+				$options['ignore_files'] = array_map('trim', explode("\n", $options['ignore_files']));
+			}
 
 			return $options;
 

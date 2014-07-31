@@ -66,9 +66,9 @@ class ACI_Routine_Check_Write_Permissions {
 			$allowed_dir = false;
 
 			if ($recurse) {
-				if ( $folder == "/*" && in_array( $folder, self::$_options['allowed_dirs'] ) ) {
+				if ( "/*" == $folder && in_array( "/*", self::$_options['allowed_dirs'] ) ) {
 					$allowed_dir = true;
-				} else if ( strpos( $file_path, $folder_base ) ) {
+				} else if ( empty( $folder_base ) || false != strpos( $file_path, $folder_base ) ) {
 					$allowed_dir = true;
 				}
 			} else if ( in_array( $folder, self::$_options['allowed_dirs'] ) ) {
@@ -145,7 +145,7 @@ class ACI_Routine_Check_Write_Permissions {
 		<tr valign="top">
 		    <td scope="row" valign="top" style="vertical-align: top;">Allowed directories</td>
 		    <td>
-        		<textarea cols="45" rows="5" name="aci_options[<?php echo $routine; ?>][allowed_dirs]" type="checkbox" id="aci_options_<?php echo $routine; ?>_allowed_dirs"><?php echo implode("\n", $options['allowed_dirs']); ?></textarea>
+        		<textarea cols="45" rows="5" name="aci_options[<?php echo $routine; ?>][allowed_dirs]" type="checkbox" id="aci_options_<?php echo $routine; ?>_allowed_dirs"><?php echo implode("\n", (array) $options['allowed_dirs']); ?></textarea>
         		<p class="description">Enter a list of directories where the web server should be allowed to write files, seperated by line breaks.</p>
 			</td>
 		</tr>
@@ -156,7 +156,9 @@ class ACI_Routine_Check_Write_Permissions {
 
 	public static function settings( $options ) {
 
-		$options['allowed_dirs'] = array_map('trim', explode("\n", $options['allowed_dirs']));
+		if ( !empty( $options['allowed_dirs'] ) && false != strpos( $options['allowed_dirs'], "\n" ) ) {
+			$options['allowed_dirs'] = array_map('trim', explode("\n", $options['allowed_dirs']));
+		}
 
 		return $options;
 
