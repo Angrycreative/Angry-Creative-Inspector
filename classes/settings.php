@@ -369,7 +369,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
             $saved_option = parent::get_option( 'ac_inspector_log_path' );
 
-            if ( !empty( $input['log_path'] ) )
+            if ( !empty( $input['log_path'] ) ) {
 
 	            if ( $saved_option === FALSE ) {
 
