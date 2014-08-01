@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.3.0
+Version: 0.3.1
 Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -29,41 +29,41 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		}
 
-		public static function get_inspection_method($routine, $options = array()) {
+		public static function get_inspection_method( $routine, $options = array() ) {
 
-			if (empty($routine)) {
+			if ( empty( $routine ) ) {
 				return false;
 			}
 
-			if (!is_array($options) || empty($options)) {
+			if ( !is_array( $options ) || empty( $options ) ) {
 
-				$options = self::get_options($routine);
+				$options = self::get_options( $routine );
 
-				if (!is_array($options)) {
+				if ( !is_array( $options ) ) {
 					$options = array();
 				}
 
 			}
 
-			if (class_exists($routine)) {
+			if ( class_exists( $routine ) ) {
 
-				if ($options['inspection_method'] && method_exists($routine, $options['inspection_method'])) {
+				if ( !empty( $options['inspection_method'] ) && method_exists( $routine, $options['inspection_method'] ) ) {
 
-					return array($routine, $options['inspection_method']);
+					return array( $routine, $options['inspection_method'] );
 
-				} else if (method_exists($routine, 'inspect')) {
+				} else if ( method_exists( $routine, 'inspect' ) ) {
 
-					return array($routine, 'inspect');
+					return array( $routine, 'inspect' );
 
 				}
 
 			} 
 
-			if (!empty($options['inspection_method']) && function_exists($options['inspection_method'])) {
+			if ( !empty( $options['inspection_method'] ) && function_exists( $options['inspection_method'] ) ) {
 
 				return $options['inspection_method'];
 
-			} else if (function_exists($routine)) {
+			} else if ( function_exists( $routine ) ) {
 
 				return $routine;
 
@@ -85,34 +85,34 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			
 		}
 
-		public static function get_options($routine) {
+		public static function get_options( $routine ) {
 
-			if (empty($routine)) {
+			if ( empty( $routine ) ) {
 				return false;
 			}
 
-			$options_key = self::routine_options_key($routine);
+			$options_key = self::routine_options_key( $routine );
 
-			$options = AC_Inspector::get_option($options_key);
+			$options = AC_Inspector::get_option( $options_key );
 
-			if ( $options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+			if ( !empty( $options['site_specific_settings'] ) && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
 
 				global $wpdb;
-				$site_blog_ids = $wpdb->get_col("SELECT blog_id FROM ".$wpdb->prefix."blogs");
+				$site_blog_ids = $wpdb->get_col( "SELECT blog_id FROM ".$wpdb->prefix."blogs" );
 
-				if (is_array($site_blog_ids)) {
+				if ( is_array( $site_blog_ids ) ) {
 
-					$global_opt_keys = array_keys($options);
+					$global_opt_keys = array_keys( $options );
 
 					foreach( $site_blog_ids AS $site_blog_id ) {
 
-						if ( !is_array($options[$site_blog_id]) ) {
+						if ( !is_array( $options[$site_blog_id] ) ) {
 							$options[$site_blog_id] = array();
 						}
 
-						foreach($global_opt_keys as $global_opt_key ) {
+						foreach( $global_opt_keys as $global_opt_key ) {
 
-							if ( !is_numeric($global_opt_key) && $global_opt_key != 'site_specific_settings' && !isset($options[$site_blog_id][$global_opt_key]) ) {
+							if ( !is_numeric( $global_opt_key ) && $global_opt_key != 'site_specific_settings' && !isset( $options[$site_blog_id][$global_opt_key] ) ) {
 								$options[$site_blog_id][$global_opt_key] = $options[$global_opt_key];
 							}
 
@@ -137,23 +137,23 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		}
 
-		public static function add($routine, $options = array(), $action = "ac_inspection", $priority = 10, $accepted_args = 1) {
+		public static function add( $routine, $options = array(), $action = "ac_inspection", $priority = 10, $accepted_args = 1 ) {
 
-			$inspection_method = self::get_inspection_method($routine, $options);
+			$inspection_method = self::get_inspection_method( $routine, $options );
 
-			if ( !$inspection_method ) {
+			if ( empty( $inspection_method ) ) {
 				return false;
 			}
 
-			if ( empty($action) ) {
+			if ( empty( $action ) ) {
 				$action = "ac_inspection";
 			}
 
-			if ( !is_array( self::$routine_events[$routine] ) ) {
+			if ( !array_key_exists( $routine, self::$routine_events ) || !is_array( self::$routine_events[$routine] ) ) {
 				self::$routine_events[$routine] = array();
 			}
 
-			if ( in_array($action, self::$routine_events[$routine]) ) {
+			if ( in_array( $action, self::$routine_events[$routine] ) ) {
 				return false;
 			}
 
@@ -169,22 +169,22 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				unset( $saved_options['description'] );
 			}
 
-			if ( is_array($options) && !empty( $options ) ) {
-				if ( is_array($saved_options) ) {
+			if ( !empty( $options ) && is_array( $options ) ) {
+				if ( is_array( $saved_options ) ) {
 					foreach( $saved_options as $opt_key => $saved_val ) {
-						if ( !isset($options[$opt_key]) || $options[$opt_key] != $saved_val ) {
+						if ( !isset( $options[$opt_key] ) || $options[$opt_key] != $saved_val ) {
 							$options[$opt_key] = $saved_val;
 						}
 					}
 				}
-				if ( !is_array($saved_options) || ( count($options) != count($saved_options) ) ) {
+				if ( !is_array( $saved_options ) || ( count( $options ) != count( $saved_options ) ) ) {
 					self::set_options( $routine, $options );
 				}
 			}
 
-			if ( $options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+			if ( !empty( $options['site_specific_settings'] ) && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
 				$current_site_id = get_current_blog_id();
-				if ($options[$current_site_id]['log_level'] == 'ignore') {
+				if ( $options[$current_site_id]['log_level'] == 'ignore' ) {
 					return true;
 				}
 			} else if ( $options['log_level'] == 'ignore' ) {
@@ -199,7 +199,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function remove($routine, $action = "", $priority = 10) {
 
-			if (empty($routine)) {
+			if ( empty( $routine ) ) {
 				return false;
 			}
 
@@ -213,7 +213,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			}
 
-			unset(self::$routine_events[$routine]);
+			unset( self::$routine_events[$routine] );
 			
 			return true;
 
@@ -221,13 +221,13 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function get_event_routines($event) {
 
-			if (empty($event)) {
+			if ( empty( $event) ) {
 				return false;
 			}
 
 			$event_routines = array();
 
-			foreach(array_keys(self::$routine_events) as $routine) {
+			foreach( array_keys( self::$routine_events ) as $routine ) {
 				if ( in_array( $event, self::$routine_events[$routine] ) ) {
 					$event_routines[] = $routine;
 				}

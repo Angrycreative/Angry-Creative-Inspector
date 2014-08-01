@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Settings
-Version: 0.3.0
+Version: 0.3.1
 Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -48,7 +48,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 		public function admin_notices() {
 
-			if ( 'ac-inspector' == $_GET['page'] && isset( $_GET['updated'] ) ) {
+			if ( isset( $_GET['updated'] ) && isset( $_GET['page'] ) && 'ac-inspector' == $_GET['page'] ) {
 
 				echo '<div class="updated"><p>';
 				echo 'Your AC Inspector settings was updated successfully.';
@@ -363,35 +363,43 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	    public function validate_options( $input = array() ) {
 
-	    	if (empty($input) && $_SERVER['REQUEST_METHOD'] == "POST" && isset($_POST['aci_options'])) {
+	    	if ( empty( $input ) && $_SERVER['REQUEST_METHOD'] == "POST" && isset( $_POST['aci_options'] ) ) {
 	    		$input = $_POST['aci_options'];
 	    	}
 
             $saved_option = parent::get_option( 'ac_inspector_log_path' );
 
-            if ( $saved_option === FALSE ) {
+            if ( !empty( $input['log_path'] ) )
 
-            	parent::add_option( 'ac_inspector_log_path', $input['log_path'] );
+	            if ( $saved_option === FALSE ) {
 
-            } else {
+	            	parent::add_option( 'ac_inspector_log_path', $input['log_path'] );
 
-                parent::update_option( 'ac_inspector_log_path', $input['log_path'] );
+	            } else {
 
-            }
+	                parent::update_option( 'ac_inspector_log_path', $input['log_path'] );
 
-            parent::$log_path = $input['log_path'];
+	            }
 
-	        $routines = ACI_Routine_Handler::get_all();
+	        	parent::$log_path = $input['log_path'];
+
+	        }
+
+	        $routines = (array) ACI_Routine_Handler::get_all();
 
 			foreach( array_keys($routines) as $routine ) { 
 
 				$routine_settings = ACI_Routine_Handler::get_options($routine);
 
-	            $new_routine_settings = $input[$routine];
+				if ( !empty( $input[$routine] ) && is_array( $input[$routine] ) ) {
+	            	$new_routine_settings = $input[$routine];
+	            } else {
+	            	$new_routine_settings = array();
+	            }
 
 	            foreach($routine_settings as $opt => $val) {
 
-	            	if (isset($new_routine_settings[$opt])) {
+	            	if ( isset( $new_routine_settings[$opt] ) ) {
 	            		$routine_settings[$opt] = $new_routine_settings[$opt];
 	            	}
 
@@ -453,7 +461,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	    	$log_levels = AC_Inspector::get_log_levels();
 	    	$routine_settings = ACI_Routine_Handler::get_options($routine);
 
-	    	if ( !empty($routine_settings['description']) ) { ?>
+	    	if ( !empty( $routine_settings['description'] ) ) { ?>
 
 	    		<tr valign="top">
 				    <td colspan="2" class="description-row" scope="row" valign="top"><div class="howto"><?php echo $routine_settings['description']; ?></div></td>
@@ -461,7 +469,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 	    	<?php }
 
-	    	if ( isset($routine_settings['site_specific_settings']) && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) { ?>
+	    	if ( isset( $routine_settings['site_specific_settings'] ) && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) { ?>
 
 	    		<tr valign="top">
 				    <td scope="row" valign="top">Site specific settings</td>
@@ -481,7 +489,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 				global $wpdb;
 				$site_blog_ids = $wpdb->get_col("SELECT blog_id FROM ".$wpdb->prefix."blogs");
 
-				if (is_array($site_blog_ids)) {
+				if ( is_array( $site_blog_ids ) ) {
 
 					foreach( $site_blog_ids AS $site_blog_id ) {
 
