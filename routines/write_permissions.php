@@ -100,7 +100,7 @@ class ACI_Routine_Check_Write_Permissions {
 			if ($recurse) {
 				if ( "/*" == $folder && in_array( "/*", self::$_options['allowed_dirs'] ) ) {
 					$allowed_dir = true;
-				} else if ( empty( $folder_base ) || false != strpos( $file_path, $folder_base ) ) {
+				} else if ( !empty( $folder_base ) && false !== strpos( $file_path, $folder_base ) ) {
 					$allowed_dir = true;
 				}
 			} else if ( in_array( $folder, self::$_options['allowed_dirs'] ) ) {

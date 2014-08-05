@@ -3,7 +3,7 @@ Contributors: ac-robin, samface, angrycreative
 Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
 Requires at least: 3.0.1
 Tested up to: 3.9.1
-Stable tag: 0.5.2
+Stable tag: 0.5.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
