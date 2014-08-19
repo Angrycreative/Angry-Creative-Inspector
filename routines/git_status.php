@@ -55,8 +55,10 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 		        	$routine_options['changed_files'] = array();
 		        }
 
-		        if ( !is_array($routine_options['ignore_files']) ) {
-		        	$routine_options['ignore_files'] = array();
+		        if ( empty( $routine_options['ignore_files'] ) ) {
+		        	$routine_options['ignore_files'] = self::$_default_ignore_files;
+		        } else if ( !is_array( $routine_options['ignore_files'] ) ) {
+		        	$routine_options['ignore_files'] = (array) $routine_options['ignore_files'];
 		        }
 
 		        foreach( array_keys($changed_files) as $change ) {
@@ -96,6 +98,7 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 		        }
 
 		        $routine_options['changed_files'] = $changed_files;
+
 		        ACI_Routine_Handler::set_options( __CLASS__, $routine_options );
 
 			}
