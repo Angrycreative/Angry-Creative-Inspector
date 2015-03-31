@@ -89,6 +89,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
     		wp_enqueue_style('aci-tabs-style', plugins_url('css/tabs.css', ACI_PLUGIN_FILE), array(), '20140115');
 
+    		wp_enqueue_script('aci-main-script', plugins_url('js/main.js', ACI_PLUGIN_FILE), array('jquery'), '20140115', true);
+
 	        wp_enqueue_script('aci-tabs-script', plugins_url('js/tabs.js', ACI_PLUGIN_FILE), array('jquery-ui-tabs'), '20140115', true);
 	        
 		}
@@ -153,7 +155,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 											   	array_push($lines, $line);
 
-											   	if (count($lines)>25) {
+											   	if (count($lines)>999) {
 											       array_shift($lines);
 											    }
 

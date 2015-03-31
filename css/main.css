@@ -4,6 +4,32 @@
 	margin-left: 10px;
 }
 
+#aci-settings-wrap .latest > ul {
+	display:block;
+	height: 360px;
+	overflow-y:auto;
+	overflow-x:hidden;
+	border: 1px solid #DFDFDF;
+  border-top-width: 1px;
+  padding-bottom: 1em;
+  background: white;
+  border-radius: 6px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  border-bottom-left-radius: 6px;
+  -moz-border-radius-topright: 6px;
+  -moz-border-radius-bottomright: 6px;
+  -moz-border-radius-bottomleft: 6px;
+  -webkit-border-top-right-radius: 6px;
+  -webkit-border-bottom-right-radius: 6px;
+  -webkit-border-bottom-left-radius: 6px;
+  padding: 15px;
+  font-family: monospace;
+  background: #f4f4f4;
+}
+
 #aci-settings-wrap .aci-section-content .form-table td {
 	vertical-align: top; 
 }
