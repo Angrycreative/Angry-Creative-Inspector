@@ -55,7 +55,7 @@ class ACI_Routine_Log_JS_Errors {
 						  "&ua=" + encodeURIComponent(navigator.userAgent) +
 						  "&e=" + encodeURIComponent(errorObj);
 			}
-			return true;
+			return false;
 		}
 		</script>
 		<?php
