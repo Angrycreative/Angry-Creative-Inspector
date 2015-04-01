@@ -3,7 +3,7 @@ Contributors: ac-robin, samface, angrycreative
 Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
 Requires at least: 4.0
 Tested up to: 4.1.1
-Stable tag: 0.5.4
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,8 +21,16 @@ Inspects and logs possible issues with your Wordpress installation.
 
 == Changelog ==
 
-= 0.5.x =
+= 0.6.x =
 * New routine for checking mysql database collations
+* New routine for logging user profile updates
+* New routine for logging new user registrations
+* New routine for logging new site registrations
+* Fixed a bug in the routine for javascript errors that prevented browser debugging
+* Added function for downloading log file
+* Better log file display in wp-admin
+
+= 0.5.x =
 * New routine for logging javascript errors
 * New routine for logging user capability changes
 * Revised and much improved routine for checking file write permissions
