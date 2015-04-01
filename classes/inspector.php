@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.5.0
+Version: 0.5.1
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -195,6 +195,19 @@ if(!class_exists('AC_Inspector')) {
 
 			return true;
 
+		}
+
+		public static function download_log() {
+			if ( file_exists( self::$log_path ) ) {
+				header( "Content-type: application/x-msdownload", true, 200 );
+				header( "Content-Disposition: attachment; filename=ac_inspection.log" );
+				header( "Pragma: no-cache" );
+				header( "Expires: 0" );
+				echo file_get_contents( self::$log_path );
+				exit();
+			} else {
+				self::log( 'Failed to download log file: File does not exist.' );
+			}
 		}
 
 		public static function clear_log() {

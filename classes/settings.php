@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Settings
-Version: 0.3.1
+Version: 0.3.2
 Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -190,7 +190,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 								</div> 
 
 								<form name="post" action="<?php echo self::$_plugin_options_url; ?>" method="post" id="post">
-							    	<button class="button" name="clear_log" value="true" />Clear log</button>
+									<button class="button" name="clear_log" value="true" />Clear log</button>
+							    	<button class="button" name="download_log" value="true" />Download log</button>
 							    	<button class="button button-primary" name="inspect" value="true" />Inspect now!</button>
 							    </form>
 
@@ -257,6 +258,9 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	    		}
 	    		if ( isset( $_POST['clear_log'] ) ) {
 	    			parent::clear_log();
+	    		}
+	    		if ( isset( $_POST['download_log'] ) ) {
+	    			parent::download_log();
 	    		}
 	    	}
 
@@ -364,6 +368,11 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 	    }
 
 	    public function validate_options( $input = array() ) {
+
+	    	if ( $_REQUEST['download_log_file'] ) {
+	    		$this->download_log_file();
+	    		exit;
+	    	}
 
 	    	if ( empty( $input ) && $_SERVER['REQUEST_METHOD'] == "POST" && isset( $_POST['aci_options'] ) ) {
 	    		$input = $_POST['aci_options'];
@@ -567,7 +576,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
             do_settings_fields( $page, $section['id'] );
             echo '</table>';
 
-		}	
+		}
 
 	}
 

@@ -1,9 +1,9 @@
 === Angry Creative Inspector ===
 Contributors: ac-robin, samface, angrycreative 
 Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
-Requires at least: 3.0.1
-Tested up to: 3.9.1
-Stable tag: 0.5.3
+Requires at least: 4.0
+Tested up to: 4.1.1
+Stable tag: 0.5.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,7 @@ Inspects and logs possible issues with your Wordpress installation.
 == Changelog ==
 
 = 0.5.x =
+* New routine for checking mysql database collations
 * New routine for logging javascript errors
 * New routine for logging user capability changes
 * Revised and much improved routine for checking file write permissions
