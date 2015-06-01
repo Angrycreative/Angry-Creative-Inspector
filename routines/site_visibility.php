@@ -36,7 +36,7 @@ class ACI_Routine_Check_Site_Visibility {
 
 						if ( !$visible ) {
 
-							AC_Inspector::log( 'Site '.$site_blog_id.' is not visible to search engines.', __CLASS__, $site_blog_id );
+							AC_Inspector::log( 'Site '.$site_blog_id.' is not visible to search engines.', __CLASS__, array( 'site_id' => $site_blog_id ) );
 
 						}
 

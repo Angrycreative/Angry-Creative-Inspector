@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.5.1
+Version: 0.6
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -14,6 +14,8 @@ if(!class_exists('AC_Inspector')) {
 		public static $log_path = "";
 		public static $errors = array();
 		public static $log_count = 0;
+		public static $success_count = 0;
+		public static $error_count = 0;
 
 		private static $_default_log_path = "";
 		private static $_log_levels = array();
@@ -244,30 +246,72 @@ if(!class_exists('AC_Inspector')) {
 
 		}
 
+		public function increment_success_count() {
+
+			self::$success_count++;
+
+		}
+
+		public function increment_error_count() {
+
+			self::$error_count++;
+			
+		}
+
+		public function get_success_count() {
+
+			return self::$success_count;
+
+		}
+
+		public function get_error_count() {
+
+			return self::$error_count;
+
+		}
+
 		/* 
 			Main log function that does the actual output
 		*/
-		public static function log($message, $routine = '', $site_id = '') {
+		public static function log($message, $routine = '', $args = array() ) {
 
-			$log_level = '';
+			if ( !is_array( $args ) && is_numeric( $args ) ) {
+				// For backwards compatibility...
+				$args = array( 'site_id' => $args );
+			}
+
+			$default_args = array(
+				'site_id' => get_current_blog_id(),
+				'site_specific_settings' => false,
+				'log_level' => 'notice',
+				'success' => false,
+				'error' => false
+			);
 
 			if (!empty($routine)) {
 
 				$routine_options = ACI_Routine_Handler::get_options($routine);
 
-				if (is_array($routine_options)) {
-					if ( $routine_options['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
+				$routine_args = wp_parse_args( $routine_options, $default_args );
+				$args = wp_parse_args( $args, $routine_args );
+
+				if ( is_array( $args ) ) {
+					if ( $args['site_specific_settings'] && is_multisite() && is_plugin_active_for_network( ACI_PLUGIN_BASENAME ) ) {
 						$site_id = ( is_numeric($site_id) ) ? $site_id : get_current_blog_id();
-						if ( is_array($routine_options[$site_id]) && isset($routine_options[$site_id]['log_level']) ) {
-							$log_level = $routine_options[$site_id]['log_level'];
-						} else if ( is_array($routine_options[1]) && isset($routine_options[1]['log_level']) ) {
-							$log_level = $routine_options[1]['log_level'];
+						if ( is_array($args[$site_id]) && isset($args[$site_id]['log_level']) ) {
+							$log_level = $args[$site_id]['log_level'];
+						} else if ( is_array($args[1]) && isset($args[1]['log_level']) ) {
+							$log_level = $args[1]['log_level'];
 						}
 					}
-					if ( empty($log_level) && isset($routine_options['log_level']) ) {
-						$log_level = $routine_options['log_level'];
+					if ( empty($log_level) && isset($args['log_level']) ) {
+						$log_level = $args['log_level'];
 					}
 				}
+
+			} else {
+
+				$args = wp_parse_args( $args, $default_args );
 
 			}
 
@@ -285,14 +329,32 @@ if(!class_exists('AC_Inspector')) {
 	            	error_log( $output, 3, self::$log_path );
 					error_log( print_r( $message, true ) . "\n", 3, self::$log_path ); 
 
+					if ( defined('WP_CLI') && WP_CLI ) {
+						echo $output . "\n";
+						print_r( $message );
+						echo "\n";
+					}
+
 	        	} else {
 
 					$message = $output . $message;
 	            	error_log( $message . "\n", 3, self::$log_path ); 
 
+	            	if ( defined('WP_CLI') && WP_CLI ) {
+						echo $message . "\n";
+					}
+
 	        	}
 
 	        	self::$log_count++;
+
+	        	if ( $args['error'] ) {
+	        		self::$error_count++;
+	        	}
+
+	        	if ( $args['success'] ) {
+	        		self::$success_count++;
+	        	}
 
 	        }
 

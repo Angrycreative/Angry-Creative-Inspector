@@ -1,9 +1,9 @@
 === Angry Creative Inspector ===
-Contributors: ac-robin, samface, angrycreative 
+Contributors: ac-robin, samface, angrycreative
 Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
 Requires at least: 4.0
-Tested up to: 4.1.1
-Stable tag: 0.6.0
+Tested up to: 4.2.2
+Stable tag: 0.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,13 @@ Inspects and logs possible issues with your Wordpress installation.
 3. Make sure the right log file path is set under the 'Settings/AC Inspector' menu in Wordpress
 
 == Changelog ==
+
+= 0.7.x =
+* Added repair method support for inspection routines
+* Added WP CLI support for operating the inspector via command line
+* Added inspect command for doing inspections via command line
+* Added repair command for doing repairs via command line
+* Added repair method to mysql database collations routine
 
 = 0.6.x =
 * New routine for checking mysql database collations

@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.3.1
+Version: 0.3.2
 Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -10,6 +10,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 	class ACI_Routine_Handler {
 
+		private static $force_enabled = array();
 		private static $routine_events = array();
 
 		public static function routine_options_key($routine) {
@@ -73,6 +74,46 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		}
 
+		public static function get_repair_method( $routine, $options = array() ) {
+
+			if ( empty( $routine ) ) {
+				return false;
+			}
+
+			if ( !is_array( $options ) || empty( $options ) ) {
+
+				$options = self::get_options( $routine );
+
+				if ( !is_array( $options ) ) {
+					$options = array();
+				}
+
+			}
+
+			if ( class_exists( $routine ) ) {
+
+				if ( !empty( $options['repair_method'] ) && method_exists( $routine, $options['repair_method'] ) ) {
+
+					return array( $routine, $options['repair_method'] );
+
+				} else if ( method_exists( $routine, 'repair' ) ) {
+
+					return array( $routine, 'repair' );
+
+				}
+
+			} 
+
+			if ( !empty( $options['repair_method'] ) && function_exists( $options['repair_method'] ) ) {
+
+				return $options['repair_method'];
+
+			}
+
+			return false;
+
+		}
+
 		public static function set_options($routine, $args = array()) {
 
 			if (empty($routine)) {
@@ -117,8 +158,19 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 							}
 
 						}
+
+						if ( in_array( $routine, self::$force_enabled ) && $options[$site_blog_id]['log_level'] == 'ignore' ) {
+							$options[$site_blog_id]['log_level'] = 'notice';
+						}
+
 					}
 
+				}
+
+			} else {
+
+				if ( in_array( $routine, self::$force_enabled ) && $options['log_level'] == 'ignore' ) {
+					$options['log_level'] = 'notice';
 				}
 
 			}
@@ -134,6 +186,14 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			}
 
 			$options_key = self::routine_options_key($routine);
+
+		}
+
+		public static function force_enable( $routine = "" ) {
+			
+			if ( !empty( $routine ) ) {
+				self::$force_enabled = array_merge( self::$force_enabled, array( $routine ) );
+			}
 
 		}
 
