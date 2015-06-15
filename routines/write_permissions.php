@@ -81,6 +81,27 @@ class ACI_Routine_Check_Write_Permissions {
 
 	public static function inspect( $folders2check = array() ) {
 
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+
+			if ( !defined( 'HTTPD_USER' ) ) {
+				AC_Inspector::log( 'Unable to determine the user your web server is running as, please define HTTPD_USER in your wp-config.php.', __CLASS__, array( 'error' => true ) );
+				return;
+			}
+
+			$httpd_usr = posix_getpwnam( HTTPD_USER );
+
+			if ( !$httpd_usr ) {
+				AC_Inspector::log( 'Unable to get retrieve information about a user named ' . HTTPD_USER . ', please check your HTTPD_USER setting in the wp-config.php file.', __CLASS__, array( 'error' => true ) );
+				return;
+			}
+
+			if ( !posix_seteuid( $httpd_usr['uid'] ) ) {
+				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ', do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
+				return;
+			}
+
+		}
+
 		if ( !is_array($folders2check) || empty($folders2check) ) {
 
 			$folders2check = array( '/*' );
@@ -90,14 +111,12 @@ class ACI_Routine_Check_Write_Permissions {
 		foreach($folders2check as $folder) {
 
 			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
-
+			$recursive = substr($folder, -2) == "/*" ? true : false;
 			$file_path = ABSPATH.$folder_base.'/.ac_inspector_testfile';
-
-			$recurse = substr($folder, -2) == "/*" ? true : false;
 
 			$allowed_dir = false;
 
-			if ($recurse) {
+			if ($recursive) {
 				if ( "/*" == $folder && in_array( "/*", self::$_options['allowed_dirs'] ) ) {
 					$allowed_dir = true;
 				} else if ( !empty( $folder_base ) && false !== strpos( $file_path, $folder_base ) ) {
@@ -159,6 +178,198 @@ class ACI_Routine_Check_Write_Permissions {
 					}
 
 				}
+
+			}
+
+		}
+
+		return "";
+
+	}
+
+	private static function chown( $path, $owner = '', $group = '', $recursive = false, $verbose = false ) {
+
+		$path = rtrim( $path, '/' );
+
+	    if ( is_dir( $path ) ) {
+
+	    	if ( !empty( $owner ) ) {
+		        if ( !chown( $path, $owner ) ) {
+		            AC_Inspector::log( "Failed changing user ownership of directory '$path' to '$owner'", __CLASS__, array( 'error' => true ) );
+		            return false;
+		        } else if ( $verbose ) {
+		        	AC_Inspector::log( "Changed user ownership of directory '$path' to '$owner'", __CLASS__, array( 'success' => true ) );
+		        }
+		    }
+
+		    if ( !empty( $group ) ) {
+		        if ( !chgrp( $path, $group ) ) {
+		            AC_Inspector::log( "Failed changing group ownership of directory '$path' to '$group'", __CLASS__, array( 'error' => true ) );
+		            return false;
+		        } else if ( $verbose ) {
+		        	AC_Inspector::log( "Changed group ownership of directory '$path' to '$group'", __CLASS__, array( 'success' => true ) );
+		        }
+		    }
+
+		    $ownership_str = ( $owner ) ? 'user ' . $owner : '';
+		    if ( !empty( $group ) ) {
+			    if ( empty( $ownership_str ) ) {
+			    	$ownership_str = 'group ' . $group;
+			    } else {
+			    	$ownership_str = ' and group ' . $group;
+			    }
+			}
+
+	        $dh = opendir( $path );
+	        while ( ( $file = readdir( $dh ) ) !== false ) {
+	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
+	                $fullpath = $path . '/' . $file;
+	                if ( $recursive || !is_dir( $fullpath ) ) {
+	                	if ( self::chown( $fullpath, $owner, $group, $recursive ) ) {
+	                		if ( is_dir( $fullpath ) && $verbose ) {
+	                			AC_Inspector::log( "Changed ownership of files in '$fullpath' to $ownership_str", __CLASS__, array( 'success' => true ) );
+	                		}
+	                	} else {
+	                		return false;
+	                	}
+	                }
+	            }
+	        }
+
+	        if ( $verbose ) {
+	        	AC_Inspector::log( "Changed ownership of files in '$path' to $ownership_str", __CLASS__, array( 'success' => true ) );
+	        }
+
+	        closedir( $dh );
+
+	    } else {
+
+	        if ( is_link( $path ) ) {
+	            return;
+	        }
+
+	        if ( !empty( $owner ) ) {
+		        if ( !chown( $path, $owner ) ) {
+		            AC_Inspector::log( "Failed changing user ownership of file '$path' to '$owner'", __CLASS__, array( 'error' => true ) );
+		            return false;
+		        }
+		    }
+
+		    if ( !empty( $group ) ) {
+		        if ( !chgrp( $path, $group ) ) {
+		            AC_Inspector::log( "Failed changing group ownership of file '$path' to '$group'", __CLASS__, array( 'error' => true ) );
+		            return false;
+		        }
+		    }
+
+	    }
+
+	    return true;
+
+	}
+
+	private static function chmod( $path, $filemode = 0644, $dirmode = 0755, $recursive = false, $verbose = false ) {
+
+		$path = rtrim( $path, '/' );
+
+	    if ( is_dir( $path ) ) {
+
+	    	$dirmode_str = decoct( $dirmode );
+	    	$filemode_str = decoct( $filemode );
+
+	        if ( !chmod( $path, $dirmode ) ) {
+	            AC_Inspector::log( "Failed applying filemode '$dirmode_str' on directory '$path'", __CLASS__, array( 'error' => true ) );
+	            return false;
+	        } else if ( $verbose ) {
+	        	AC_Inspector::log( "Applied filemode '$dirmode_str' on directory '$path'", __CLASS__, array( 'success' => true ) );
+	        }
+
+	        $dh = opendir( $path );
+	        while ( ( $file = readdir( $dh ) ) !== false ) {
+	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
+	                $fullpath = $path . '/' . $file;
+	                if ( $recursive || !is_dir( $fullpath ) ) {
+	                	if ( self::chmod( $fullpath, $filemode, $dirmode, $recursive ) ) {
+	                		if ( is_dir( $fullpath ) && $verbose ) {
+	                			AC_Inspector::log( "Applied filemode '$filemode_str' on files in '$fullpath'", __CLASS__, array( 'success' => true ) );
+	                		}
+	                	} else {
+	                		return false;
+	                	}
+	                }
+	            }
+	        }
+
+	        if ( $verbose ) {
+	        	AC_Inspector::log( "Applied filemode '$filemode_str' on files in '$path'", __CLASS__, array( 'success' => true ) );
+	        }
+
+	        closedir( $dh );
+
+	    } else {
+
+	        if ( is_link( $path ) ) {
+	            return;
+	        }
+
+	        $filemode_str = decoct( $filemode );
+
+	        if ( !chmod( $path, $filemode ) ) {
+	            AC_Inspector::log( "Failed applying filemode '$filemode_str' on file '$path'", __CLASS__, array( 'error' => true ) );
+	            return false;
+	        }
+
+	    }
+
+	    return true;
+
+	}
+
+	public static function repair() {
+
+		if ( !function_exists( 'posix_getuid' ) ) {
+			AC_Inspector::log( 'Repairing file permissions requires a POSIX-enabled PHP server.', __CLASS__, array( 'error' => true ) );
+			return;
+		}
+
+		if ( posix_getuid() !== 0 ) {
+			AC_Inspector::log( 'Repairing file permissions must be performed as root.', __CLASS__, array( 'error' => true ) );
+			return;
+		}
+
+		$group = '';
+		$owner = '';
+
+		if ( defined( 'HTTPD_USER' ) ) {
+			$group = HTTPD_USER;
+		} else {
+			AC_Inspector::log( 'Unable to determine the user your web server is running as, please define HTTPD_USER in your wp-config.php.', __CLASS__, array( 'error' => true ) );
+			return;
+		}
+
+		if ( defined( 'FS_USER' ) ) {
+			$owner = FS_USER;
+		} else if ( defined( 'FTP_USER' ) ) {
+			$owner = FTP_USER;
+		} else if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			WP_CLI::confirm( "Unable to determine the appropriate file system owner, continue anyway?\n" .
+							 "(Define FS_USER in your wp_config.php to avoid this dialog in the future.)" );
+		} else {
+			echo "WARNING: Unable to determine the appropriate file system owner, user permissions will not be repaired.\n" .
+				 "Define FS_USER in your wp_config.php to fix this.";
+		}
+
+		if ( self::chown( ABSPATH, $owner, $group, true, true ) ) {
+
+			self::chmod( ABSPATH, 0644, 0755, true, true );
+
+			foreach(self::$_options['allowed_dirs'] as $folder) {
+
+				$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
+				$file_path = ABSPATH.$folder_base;
+				$recursive = substr($folder, -2) == "/*" ? true : false;
+
+				self::chmod( $file_path, 0664, 0775, $recursive, true );
 
 			}
 

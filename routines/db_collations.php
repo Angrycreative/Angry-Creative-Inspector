@@ -86,7 +86,7 @@ class ACI_Routine_Check_DB_Collations {
 		list( $proper_charset ) = explode( '_', $proper_db_collation );
 
 		if ( $proper_db_collation != $default_db_collation ) {
-			if ( $wpdb->query( $wpdb->prepare( "ALTER DATABASE ".DB_NAME." CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
+			if ( $wpdb->query( $wpdb->prepare( "ALTER DATABASE `".DB_NAME."` CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
 				AC_Inspector::log( "Converted default table collation from $default_db_collation to $proper_db_collation.", __CLASS__, array( 'success' => true ) );
 			} else {
 				AC_Inspector::log( "Failed to convert default table collation from $default_db_collation to $proper_db_collation!", __CLASS__ , array( 'error' => true ));
@@ -104,7 +104,7 @@ class ACI_Routine_Check_DB_Collations {
         		$tbl_collation = $tbl_collation_data->TABLE_COLLATION;
 
         		if ( $proper_db_collation != $tbl_collation ) {
-        			if ( $wpdb->query( $wpdb->prepare( "ALTER TABLE ".$tbl_name." CONVERT TO CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
+        			if ( $wpdb->query( $wpdb->prepare( "ALTER TABLE `".$tbl_name."` CONVERT TO CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
 						AC_Inspector::log( "Converted collation for $tbl_name from $tbl_collation to $proper_db_collation.", __CLASS__, array( 'success' => true ) );
         			} else {
         				AC_Inspector::log( "Failed to convert collation for $tbl_name from $tbl_collation to $proper_db_collation.", __CLASS__, array( 'error' => true ) );
@@ -121,7 +121,7 @@ class ACI_Routine_Check_DB_Collations {
 				foreach ( $tbl_columns as $column ) {
 					if ( $column->Collation ) {
 						if ( $proper_db_collation !== $column->Collation ) {
-							if ( $wpdb->query( $wpdb->prepare( "ALTER TABLE ".$tbl_name." CONVERT TO CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
+							if ( $wpdb->query( $wpdb->prepare( "ALTER TABLE `".$tbl_name."` CONVERT TO CHARACTER SET %s COLLATE %s", $proper_charset, $proper_db_collation ) ) ) {
 								AC_Inspector::log( "Converted collation for $tbl_name from $tbl_collation to $proper_db_collation.", __CLASS__, array( 'success' => true ) );
 		        			} else {
 		        				AC_Inspector::log( "Failed to convert collation for $tbl_name from $tbl_collation to $proper_db_collation.", __CLASS__, array( 'error' => true ) );

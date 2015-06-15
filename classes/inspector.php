@@ -322,6 +322,14 @@ if(!class_exists('AC_Inspector')) {
 					$log_level = "notice";
 				}
 
+				if ( $args['success'] ) {
+	        		$log_level = "success";
+	        	}
+
+	        	if ( $args['error'] ) {
+	        		$log_level = "error";
+	        	}
+
 				$output = '['.date("d M, Y H:i:s").'] ['.__CLASS__.'] [ ' .strtoupper($log_level). ' ] - ';
 
 				if (is_array($message) || is_object($message)) {

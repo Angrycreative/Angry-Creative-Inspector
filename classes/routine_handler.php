@@ -1,7 +1,7 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.3.2
+Version: 0.3.3
 Depends: AC Inspector 0.5.x
 Author: Sammy Nordström, Angry Creative AB
 */
@@ -194,6 +194,36 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			if ( !empty( $routine ) ) {
 				self::$force_enabled = array_merge( self::$force_enabled, array( $routine ) );
 			}
+
+		}
+
+		public static function release_tier_aware() {
+
+			if ( defined( 'SITE_RELEASE_TIER' ) ) {
+				return true;
+			}
+
+			return false;
+
+		}
+
+		public static function get_release_tier() {
+
+			if ( defined( 'SITE_RELEASE_TIER' ) && in_array( SITE_RELEASE_TIER, array( 'local', 'development', 'integration', 'test', 'stage', 'production' ) ) ) {
+				return SITE_RELEASE_TIER;
+			}
+
+			return false;
+
+		}
+
+		public static function is_release_tier( $tier ) {
+
+			if ( defined( 'SITE_RELEASE_TIER' ) && !empty( $tier ) && $tier == SITE_RELEASE_TIER ) {
+				return true;
+			}
+
+			return false;
 
 		}
 
