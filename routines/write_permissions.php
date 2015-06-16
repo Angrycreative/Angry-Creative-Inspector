@@ -156,7 +156,7 @@ class ACI_Routine_Check_Write_Permissions {
 
 			} catch ( Exception $e ) {
 
-				AC_Inspector::log( $e->getMessage(), __CLASS__ );
+				AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
 
 			}
 
@@ -189,26 +189,44 @@ class ACI_Routine_Check_Write_Permissions {
 
 	private static function chown( $path, $owner = '', $group = '', $recursive = false, $verbose = false ) {
 
+		if ( empty( $owner ) && empty( $group ) ) {
+	    	return false;
+	    }
+
 		$path = rtrim( $path, '/' );
 
 	    if ( is_dir( $path ) ) {
 
 	    	if ( !empty( $owner ) ) {
-		        if ( !chown( $path, $owner ) ) {
-		            AC_Inspector::log( "Failed changing user ownership of directory '$path' to '$owner'", __CLASS__, array( 'error' => true ) );
-		            return false;
-		        } else if ( $verbose ) {
-		        	AC_Inspector::log( "Changed user ownership of directory '$path' to '$owner'", __CLASS__, array( 'success' => true ) );
-		        }
+	    		try {
+	    			$chowned = @chown( $path, $owner );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing user ownership of directory '$path' to '$owner'" );
+			        } else if ( $verbose ) {
+			        	AC_Inspector::log( "Changed user ownership of directory '$path' to '$owner'", __CLASS__, array( 'success' => true ) );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$owner = '';
+				}
 		    }
 
 		    if ( !empty( $group ) ) {
-		        if ( !chgrp( $path, $group ) ) {
-		            AC_Inspector::log( "Failed changing group ownership of directory '$path' to '$group'", __CLASS__, array( 'error' => true ) );
-		            return false;
-		        } else if ( $verbose ) {
-		        	AC_Inspector::log( "Changed group ownership of directory '$path' to '$group'", __CLASS__, array( 'success' => true ) );
-		        }
+		    	try {
+			        $chowned = @chown( $path, $group );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing group ownership of directory '$path' to '$group'" );
+			        } else if ( $verbose ) {
+			        	AC_Inspector::log( "Changed group ownership of directory '$path' to '$group'", __CLASS__, array( 'success' => true ) );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$group = '';
+				}
+		    }
+
+		    if ( empty( $owner ) && empty( $group ) ) {
+		    	return false;
 		    }
 
 		    $ownership_str = ( $owner ) ? 'user ' . $owner : '';
@@ -249,17 +267,31 @@ class ACI_Routine_Check_Write_Permissions {
 	        }
 
 	        if ( !empty( $owner ) ) {
-		        if ( !chown( $path, $owner ) ) {
-		            AC_Inspector::log( "Failed changing user ownership of file '$path' to '$owner'", __CLASS__, array( 'error' => true ) );
-		            return false;
-		        }
+	        	try {
+			        $chowned = @chown( $path, $owner );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing user ownership of file '$path' to '$owner'" );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$owner = '';
+				}
 		    }
 
 		    if ( !empty( $group ) ) {
-		        if ( !chgrp( $path, $group ) ) {
-		            AC_Inspector::log( "Failed changing group ownership of file '$path' to '$group'", __CLASS__, array( 'error' => true ) );
-		            return false;
-		        }
+		        try {
+			        $chowned = @chown( $path, $group );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing group ownership of file '$path' to '$group'" );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$group = '';
+				}
+		    }
+
+		    if ( empty( $owner ) && empty( $group ) ) {
+		    	return false;
 		    }
 
 	    }
@@ -277,12 +309,17 @@ class ACI_Routine_Check_Write_Permissions {
 	    	$dirmode_str = decoct( $dirmode );
 	    	$filemode_str = decoct( $filemode );
 
-	        if ( !chmod( $path, $dirmode ) ) {
-	            AC_Inspector::log( "Failed applying filemode '$dirmode_str' on directory '$path'", __CLASS__, array( 'error' => true ) );
-	            return false;
-	        } else if ( $verbose ) {
-	        	AC_Inspector::log( "Applied filemode '$dirmode_str' on directory '$path'", __CLASS__, array( 'success' => true ) );
-	        }
+	    	try {
+	    		$chmodded = @chmod( $path, $dirmode );
+		        if ( !$chmodded ) {
+		            throw new Exception( "Failed applying filemode '$dirmode_str' on directory '$path'" );
+		        } else if ( $verbose ) {
+		        	AC_Inspector::log( "Applied filemode '$dirmode_str' on directory '$path'", __CLASS__, array( 'success' => true ) );
+		        }
+		    } catch ( Exception $e ) {
+				AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+				return false;
+			}
 
 	        $dh = opendir( $path );
 	        while ( ( $file = readdir( $dh ) ) !== false ) {
@@ -314,10 +351,15 @@ class ACI_Routine_Check_Write_Permissions {
 
 	        $filemode_str = decoct( $filemode );
 
-	        if ( !chmod( $path, $filemode ) ) {
-	            AC_Inspector::log( "Failed applying filemode '$filemode_str' on file '$path'", __CLASS__, array( 'error' => true ) );
-	            return false;
-	        }
+	        try {
+	    		$chmodded = @chmod( $path, $filemode );
+		        if ( !$chmodded ) {
+		            throw new Exception( "Failed applying filemode '$filemode_str' on file '$path'" );
+		        }
+		    } catch ( Exception $e ) {
+				AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+				return false;
+			}
 
 	    }
 
@@ -343,35 +385,40 @@ class ACI_Routine_Check_Write_Permissions {
 		if ( defined( 'HTTPD_USER' ) ) {
 			$group = HTTPD_USER;
 		} else {
-			AC_Inspector::log( 'Unable to determine the user your web server is running as, please define HTTPD_USER in your wp-config.php.', __CLASS__, array( 'error' => true ) );
-			return;
+			AC_Inspector::log( 'Unable to determine the user your web server is running as, define HTTPD_USER in your wp-config.php to correct this.', __CLASS__, array( 'log_level' => 'warning' ) );
 		}
 
 		if ( defined( 'FS_USER' ) ) {
 			$owner = FS_USER;
 		} else if ( defined( 'FTP_USER' ) ) {
 			$owner = FTP_USER;
-		} else if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			WP_CLI::confirm( "Unable to determine the appropriate file system owner, continue anyway?\n" .
-							 "(Define FS_USER in your wp_config.php to avoid this dialog in the future.)" );
 		} else {
-			echo "WARNING: Unable to determine the appropriate file system owner, user permissions will not be repaired.\n" .
-				 "Define FS_USER in your wp_config.php to fix this.";
+			AC_Inspector::log( 'Unable to determine the appropriate file system owner, define FS_USER in your wp-config.php to correct this.', __CLASS__, array( 'log_level' => 'warning' ) );
 		}
 
-		if ( self::chown( ABSPATH, $owner, $group, true, true ) ) {
-
-			self::chmod( ABSPATH, 0644, 0755, true, true );
-
-			foreach(self::$_options['allowed_dirs'] as $folder) {
-
-				$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
-				$file_path = ABSPATH.$folder_base;
-				$recursive = substr($folder, -2) == "/*" ? true : false;
-
-				self::chmod( $file_path, 0664, 0775, $recursive, true );
-
+		if ( empty( $group ) && empty( $owner ) ) {
+			WP_CLI::confirm( "Skip setting ownerships (chown) and attempt to repair file permissions (chmod) anyway?" );
+		} else if ( empty( $group ) ) {
+			WP_CLI::confirm( "Skip setting group permissions and attempt to set just user permissions instead?" );
+		} else if ( empty( $owner ) ) {
+			WP_CLI::confirm( "Skip setting user permissions and attempt to set just group permissions instead?" );
+		} else if ( !self::chown( ABSPATH, $owner, $group, true, true ) ) {
+			if ( defined( 'WP_CLI' ) && WP_CLI ) {
+				WP_CLI::confirm( "There where errors while trying to set file ownerships (chown), proceed with setting file permissions (chmod) anyway?" );
+			} else {
+				return false;
 			}
+		}
+
+		self::chmod( ABSPATH, 0644, 0755, true, true );
+
+		foreach(self::$_options['allowed_dirs'] as $folder) {
+
+			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
+			$file_path = ABSPATH.$folder_base;
+			$recursive = substr($folder, -2) == "/*" ? true : false;
+
+			self::chmod( $file_path, 0664, 0775, $recursive, true );
 
 		}
 

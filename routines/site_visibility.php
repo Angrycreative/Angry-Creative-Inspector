@@ -88,6 +88,12 @@ class ACI_Routine_Check_Site_Visibility {
 	                		update_option( 'blog_public', $visible );
 	                		restore_current_blog();
 
+	                		AC_Inspector::log( 'The site visibility setting for ' . get_blog_details( $site_blog_id, true )->blogname .' is now ' . ( ( $visible ) ? ' public' : ' private' )  . '.', __CLASS__, array( 'success' => true ) );
+
+						} else {
+
+							AC_Inspector::log( 'The site visibility setting for ' . get_blog_details( $site_blog_id, true )->blogname .' seems correct, no action taken.', __CLASS__, array( 'log_level' => 'notice' ) );
+
 						}
 					}
 
@@ -102,6 +108,12 @@ class ACI_Routine_Check_Site_Visibility {
 
 				$visible = $visible ? 0 : 1;
         		update_option( 'blog_public', $visible );
+
+        		AC_Inspector::log( 'The site visibility setting is now ' . ( ( $visible ) ? ' public' : ' private' )  . '.', __CLASS__, array( 'success' => true ) );
+
+			} else {
+
+				AC_Inspector::log( 'The site visibility setting seems correct, no action taken.', __CLASS__, array( 'log_level' => 'notice' ) );
 
 			}
 
