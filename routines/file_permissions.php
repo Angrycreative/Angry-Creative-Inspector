@@ -141,7 +141,7 @@ class ACI_Routine_Check_File_Permissions {
 			}
 
 			if ( !posix_seteuid( $httpd_usr['uid'] ) ) {
-				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ', do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
+				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ' (uid: ' . $httpd_usr['uid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
 				return;
 			}
 
