@@ -1,16 +1,18 @@
 <?php
 
 /*
- * Checks write permissions on web server
+ * Checks file permissions on the web server
  */
-class ACI_Routine_Check_Write_Permissions {
+class ACI_Routine_Check_File_Permissions {
 
 	const LOG_LEVEL = 'warning';
 
-	const DESCRIPTION = 'Checks wether your web server has the appropriate write permissions.';
+	const DESCRIPTION = 'Checks wether your web server has the appropriate file permissions.';
 
 	private static $_default_allowed_dirs = array(
 		'wp-content/uploads/*',
+		'wp-content/blogs.dir/*',
+		'wp-content/cache/*',
 		'wp-content/plugins/*',
 		'wp-content/themes/*',
 		'wp-content/languages/*',
@@ -22,11 +24,17 @@ class ACI_Routine_Check_Write_Permissions {
 
 	private static $_instantiated = false;
 
+	private static $_real_abspath = ABSPATH;
+
 	public static function preload() {
 
 		if ( defined('DISALLOW_FILE_MODS') && true == DISALLOW_FILE_MODS ) {
-			self::$_default_allowed_dirs = array( 'wp-content/uploads/*' );
-			self::$_force_default_allowed_dirs = true;
+			self::$_default_allowed_dirs = array( 'wp-content/uploads/*', 
+												  'wp-content/blogs.dir/*', 
+												  'wp-content/cache/*', 
+												  'wp-content/avatars/*', 
+												  'wp-content/*/LC_MESSAGES/*' );
+			self::$_force_default_allowed_dirs = false;
 		} 
 
 		if ( defined('FS_METHOD') && 'direct' == FS_METHOD ) {
@@ -73,13 +81,50 @@ class ACI_Routine_Check_Write_Permissions {
 
 			if ( !is_array( self::$_options['allowed_dirs'] ) || empty( self::$_options['allowed_dirs'] ) ) {
 				self::$_options['allowed_dirs'] = self::$_default_allowed_dirs;
+			} else {
+				self::$_options['allowed_dirs'] = wp_parse_args( self::$_options['allowed_dirs'], self::$_default_allowed_dirs );
 			}
 
 		}
 
+		if ( is_link( rtrim( ABSPATH, '/' ) ) ) {
+			self::$_real_abspath = readlink( rtrim( ABSPATH, '/' ) );
+		} else {
+			self::$_real_abspath = rtrim( ABSPATH, '/' );
+		}
+
+		$wildcard_dir_paths = preg_grep( "/^(.*\/[^\*]*)?([\*]+\/)(.*)$/", self::$_options['allowed_dirs'] );
+
+		if ( is_array( $wildcard_dir_paths ) && count( $wildcard_dir_paths ) > 0 ) {
+
+			foreach( $wildcard_dir_paths as $wc_path ) {
+
+				$wc_path = trim( $wc_path, '/' );
+
+				if ( "/*" == substr( $wc_path, -2 ) ) {
+					$resolved_paths = glob( self::$_real_abspath.'/'.substr( $wc_path, 0, -2 ), GLOB_ONLYDIR );
+					foreach ( $resolved_paths as &$res_path ) {
+						if ( !empty( $res_path ) ) {
+							$res_path = $res_path . "/*";
+						}
+					}
+				} else {
+					$resolved_paths = glob( self::$_real_abspath.'/'.$wc_path, GLOB_ONLYDIR );
+				}
+
+				$allowed_path_key = array_search( $wc_path, self::$_options['allowed_dirs'] );
+				unset( self::$_options['allowed_dirs'][$allowed_path_key] );
+
+				if ( is_array( $resolved_paths ) && count( $resolved_paths ) > 0 ) {
+					self::$_options['allowed_dirs'] = array_merge( self::$_options['allowed_dirs'], $resolved_paths );
+				}
+
+			}
+		}
+
 	}
 
-	public static function inspect( $folders2check = array() ) {
+	public static function inspect( $folders2check = array(), $halt_on_error = true ) {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
@@ -112,8 +157,18 @@ class ACI_Routine_Check_Write_Permissions {
 
 			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
 			$recursive = substr($folder, -2) == "/*" ? true : false;
-			$file_path = ABSPATH.$folder_base.'/.ac_inspector_testfile';
 
+			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
+				$resolved_folder_path = readlink( self::$_real_abspath.'/'.$folder_base );
+			} else {
+				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+			}
+
+			if ( !self::$_force_default_allowed_dirs && !file_exists( $resolved_folder_path ) ) {
+				continue;
+			}
+
+			$file_path = $resolved_folder_path.'/.ac_inspector_testfile';
 			$allowed_dir = false;
 
 			if ($recursive) {
@@ -126,7 +181,8 @@ class ACI_Routine_Check_Write_Permissions {
 				$allowed_dir = true;
 			}
 
-			$file_created = false;
+			$bad_folder_perm = false;
+			$bad_file_perm = false;
 
 			try {
 
@@ -138,8 +194,6 @@ class ACI_Routine_Check_Write_Permissions {
 			    		throw new Exception('Was not able to create a file in allowed folder `' . $folder_base . '`. Check your file permissions.');
 			    	}
 
-			    	$file_created = false;
-
 				} else {
 
 					// Test was successful, let's cleanup before returning true...
@@ -150,19 +204,51 @@ class ACI_Routine_Check_Write_Permissions {
 			    		throw new Exception('Was able to create a file in disallowed folder `' . $folder_base . '`. Check your file permissions.');
 			    	}
 
-					$file_created = true;
-
 				}
 
 			} catch ( Exception $e ) {
 
 				AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
 
+				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
+					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
+					if ( $response !== 'y' ) {
+						return false;
+					}
+					$halt_on_error = false;
+				}
+
+				$bad_folder_perm = true;
+
 			}
 
-			if ( $file_created && substr($folder, -2) == "/*" ) {
+			$files = array_filter( glob( $resolved_folder_path."/*" ), 'is_file' );
 
-				$subfolders = glob(ABSPATH.$folder_base."/*", GLOB_ONLYDIR);
+			foreach( $files as $file ) {
+
+				$file = str_replace('//', '/', $file);
+
+				if ( !$allowed_dir && is_writable( $file ) ) {
+					AC_Inspector::log( "Writable file `$file` is in a file directory that should not be writeable. Check your file permissions.", __CLASS__, array( 'error' => true ) );
+				} else if ( $allowed_dir && !is_writable( $file ) ) {
+					AC_Inspector::log( "Unwritable file `$file` is in a file directory that should be writeable. Check your file permissions.", __CLASS__, array( 'error' => true ) );
+				}
+
+				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
+					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
+					if ( $response !== 'y' ) {
+						return false;
+					}
+					$halt_on_error = false;
+				}
+
+				$bad_file_perm = true;
+
+			}
+
+			if ( substr($folder, -2) == "/*" && ( !$halt_on_error || ( !$bad_folder_perm && !$bad_file_perm ) ) ) {
+
+				$subfolders = glob($resolved_folder_path."/*", GLOB_ONLYDIR);
 
 				if ( is_array($subfolders) && !empty($subfolders) ) {
 
@@ -174,7 +260,7 @@ class ACI_Routine_Check_Write_Permissions {
 					}
 
 					if ( is_array($subfolders) && count($subfolders) > 0 && !empty($subfolders[0]) ) {
-						self::inspect( $subfolders );
+						self::inspect( $subfolders, $halt_on_error );
 					}
 
 				}
@@ -194,6 +280,10 @@ class ACI_Routine_Check_Write_Permissions {
 	    }
 
 		$path = rtrim( $path, '/' );
+
+		if ( is_link( $path ) ) {
+			$path = readlink( $path );
+		}
 
 	    if ( is_dir( $path ) ) {
 
@@ -242,6 +332,9 @@ class ACI_Routine_Check_Write_Permissions {
 	        while ( ( $file = readdir( $dh ) ) !== false ) {
 	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
 	                $fullpath = $path . '/' . $file;
+	                if ( is_link( $fullpath ) ) {
+						$fullpath = readlink( $fullpath );
+					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
 	                	if ( self::chown( $fullpath, $owner, $group, $recursive ) ) {
 	                		if ( is_dir( $fullpath ) && $verbose ) {
@@ -261,10 +354,6 @@ class ACI_Routine_Check_Write_Permissions {
 	        closedir( $dh );
 
 	    } else {
-
-	        if ( is_link( $path ) ) {
-	            return;
-	        }
 
 	        if ( !empty( $owner ) ) {
 	        	try {
@@ -304,6 +393,10 @@ class ACI_Routine_Check_Write_Permissions {
 
 		$path = rtrim( $path, '/' );
 
+		if ( is_link( $path ) ) {
+			$path = readlink( $path );
+		}
+
 	    if ( is_dir( $path ) ) {
 
 	    	$dirmode_str = decoct( $dirmode );
@@ -325,6 +418,9 @@ class ACI_Routine_Check_Write_Permissions {
 	        while ( ( $file = readdir( $dh ) ) !== false ) {
 	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
 	                $fullpath = $path . '/' . $file;
+	                if ( is_link( $fullpath ) ) {
+						$fullpath = readlink( $fullpath );
+					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
 	                	if ( self::chmod( $fullpath, $filemode, $dirmode, $recursive ) ) {
 	                		if ( is_dir( $fullpath ) && $verbose ) {
@@ -344,10 +440,6 @@ class ACI_Routine_Check_Write_Permissions {
 	        closedir( $dh );
 
 	    } else {
-
-	        if ( is_link( $path ) ) {
-	            return;
-	        }
 
 	        $filemode_str = decoct( $filemode );
 
@@ -402,7 +494,9 @@ class ACI_Routine_Check_Write_Permissions {
 			WP_CLI::confirm( "Skip setting group permissions and attempt to set just user permissions instead?" );
 		} else if ( empty( $owner ) ) {
 			WP_CLI::confirm( "Skip setting user permissions and attempt to set just group permissions instead?" );
-		} else if ( !self::chown( ABSPATH, $owner, $group, true, true ) ) {
+		}
+
+		if ( !self::chown( self::$_real_abspath, $owner, $group, true, true ) ) {
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				WP_CLI::confirm( "There where errors while trying to set file ownerships (chown), proceed with setting file permissions (chmod) anyway?" );
 			} else {
@@ -410,15 +504,25 @@ class ACI_Routine_Check_Write_Permissions {
 			}
 		}
 
-		self::chmod( ABSPATH, 0644, 0755, true, true );
+		self::chmod( self::$_real_abspath, 0644, 0755, true, true );
 
 		foreach(self::$_options['allowed_dirs'] as $folder) {
 
-			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
-			$file_path = ABSPATH.$folder_base;
+			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( self::$_real_abspath , '', $folder ) ) ), '/' );
+
+			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
+				$resolved_folder_path = readlink( self::$_real_abspath.'/'.$folder_base );
+			} else {
+				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+			}
+
+			if ( !self::$_force_default_allowed_dirs && !file_exists( $resolved_folder_path ) ) {
+				continue;
+			}
+
 			$recursive = substr($folder, -2) == "/*" ? true : false;
 
-			self::chmod( $file_path, 0664, 0775, $recursive, true );
+			self::chmod( $resolved_folder_path, 0664, 0775, $recursive, true );
 
 		}
 
@@ -464,4 +568,4 @@ class ACI_Routine_Check_Write_Permissions {
 
 }
 
-ACI_Routine_Check_Write_Permissions::register();
+ACI_Routine_Check_File_Permissions::register();

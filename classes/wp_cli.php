@@ -2,8 +2,8 @@
 
 /*
 Class name: Angry Inspector Command
-Version: 0.1
-Depends: AC Inspector 0.6
+Version: 0.2
+Depends: AC Inspector 0.7, ACI Routine Handler 0.4
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -19,7 +19,7 @@ class Angry_Inspector_Command extends WP_CLI_Command {
      *
      * ## EXAMPLES
      *
-     *     wp angry-inspector inspect write-permissions
+     *     wp angry-inspector inspect file-permissions
      *
      * @synopsis [--force] [<routine>] [<other-routine>]
      */
@@ -147,7 +147,7 @@ class Angry_Inspector_Command extends WP_CLI_Command {
      *
      * ## EXAMPLES
      *
-     *     wp angry-inspector repair write-permissions
+     *     wp angry-inspector repair file-permissions
      *
      * @synopsis [--force] [<routine>] [<other-routine>]
      */

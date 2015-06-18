@@ -1,8 +1,8 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.3.3
-Depends: AC Inspector 0.5.x
+Version: 0.4
+Depends: AC Inspector 0.5.x or newer
 Author: Sammy Nordström, Angry Creative AB
 */
 

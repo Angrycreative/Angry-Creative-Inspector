@@ -2,7 +2,7 @@
 /*
 Class name: ACI Settings
 Version: 0.3.2
-Depends: AC Inspector 0.5.x
+Depends: AC Inspector 0.5.x or newer
 Author: Sammy Nordström, Angry Creative AB
 */
 

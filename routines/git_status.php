@@ -10,7 +10,13 @@ if ( file_exists(ABSPATH.".git") && is_dir(ABSPATH.".git") ) {
 
 		const DESCRIPTION = "Detects uncommited file changes in the site's Git-repository.";
 
-		private static $_default_ignore_files = array('wp-content/uploads/*');
+		private static $_default_ignore_files = array(
+			'wp-content/uploads/*',
+			'wp-content/blogs.dir/*',
+			'wp-content/cache/*',
+			'wp-content/avatars/*',
+			'wp-content/*/LC_MESSAGES/*'
+		);
 
 		public static function register() {
 

@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.6
+Version: 0.7
 Author: Sammy Nordström, Angry Creative AB
 */
 
