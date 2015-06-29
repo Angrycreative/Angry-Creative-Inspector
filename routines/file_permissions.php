@@ -70,8 +70,8 @@ class ACI_Routine_Check_File_Permissions {
 		self::$_options = ACI_Routine_Handler::get_options( __CLASS__ );
 
 		if ( !is_array( self::$_options ) ) {
-        	self::$_options = array();
-        }
+	        	self::$_options = array();
+        	}
 
 		if ( self::$_force_default_allowed_dirs ) {
 
@@ -139,6 +139,8 @@ class ACI_Routine_Check_File_Permissions {
 				AC_Inspector::log( 'Unable to get retrieve information about a user named ' . HTTPD_USER . ', please check your HTTPD_USER setting in the wp-config.php file.', __CLASS__, array( 'error' => true ) );
 				return;
 			}
+
+			$original_uid = posix_geteuid();
 
 			if ( !posix_seteuid( $httpd_usr['uid'] ) ) {
 				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ' (uid: ' . $httpd_usr['uid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
@@ -208,12 +210,15 @@ class ACI_Routine_Check_File_Permissions {
 
 			} catch ( Exception $e ) {
 
-				AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+				AC_Inspector::log( $e->getMessage(), __CLASS__ );
 
 				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
 					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
 					if ( $response !== 'y' ) {
-						return false;
+						if ( !posix_seteuid( $original_uid ) ) {
+							AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						}
+						return;
 					}
 					$halt_on_error = false;
 				}
@@ -229,20 +234,23 @@ class ACI_Routine_Check_File_Permissions {
 				$file = str_replace('//', '/', $file);
 
 				if ( !$allowed_dir && is_writable( $file ) ) {
-					AC_Inspector::log( "Writable file `$file` is in a file directory that should not be writeable. Check your file permissions.", __CLASS__, array( 'error' => true ) );
+					$bad_file_perm = true;
+					AC_Inspector::log( "Writable file `$file` is in a file directory that should not be writeable. Check your file permissions.", __CLASS__ );
 				} else if ( $allowed_dir && !is_writable( $file ) ) {
-					AC_Inspector::log( "Unwritable file `$file` is in a file directory that should be writeable. Check your file permissions.", __CLASS__, array( 'error' => true ) );
+					$bad_file_perm = true;
+					AC_Inspector::log( "Unwritable file `$file` is in a file directory that should be writeable. Check your file permissions.", __CLASS__ );
 				}
 
-				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
+				if ( defined( 'WP_CLI' ) && WP_CLI && $bad_file_perm && $halt_on_error ) {
 					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
 					if ( $response !== 'y' ) {
-						return false;
+						if ( !posix_seteuid( $original_uid ) ) {
+							AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						}
+						return;
 					}
 					$halt_on_error = false;
 				}
-
-				$bad_file_perm = true;
 
 			}
 
@@ -269,15 +277,23 @@ class ACI_Routine_Check_File_Permissions {
 
 		}
 
-		return "";
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+
+			if ( !posix_seteuid( $original_uid ) ) {
+				AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			}
+
+		}
+
+		return;
 
 	}
 
 	private static function chown( $path, $owner = '', $group = '', $recursive = false, $verbose = false ) {
 
 		if ( empty( $owner ) && empty( $group ) ) {
-	    	return false;
-	    }
+			return false;
+		}
 
 		$path = rtrim( $path, '/' );
 

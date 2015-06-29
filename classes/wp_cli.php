@@ -92,14 +92,14 @@ class Angry_Inspector_Command extends WP_CLI_Command {
 					break;
 				}
 
-                if ( AC_Inspector::$error_count ) {
+		if ( AC_Inspector::$error_count ) {
                     AC_Inspector::$error_count = 0;
                     continue;
                 }
 
                 $routine_log_count = AC_Inspector::$log_count - $total_log_count;
 
-        		WP_CLI::success( "Inspected $routine with $routine_log_count remark(s).\n" );
+        	WP_CLI::success( "Inspected $routine with $routine_log_count remark(s).\n" );
 
                 if ( $routine_log_count > 0 ) {
 
@@ -252,3 +252,4 @@ class Angry_Inspector_Command extends WP_CLI_Command {
 }
 
 WP_CLI::add_command( 'angry-inspector', 'Angry_Inspector_Command' );
+
