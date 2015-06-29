@@ -28,7 +28,7 @@ Inspects and logs possible issues with your Wordpress installation.
 * Added the abilitiy to define FS_USER (file owner user name) in wp-config.php
 * Added repair method to file permissions routine using HTTPD_USER and FS_USER for setting ownerships
 * Added the abilitiy to define SITE_RELEASE_TIER (local/development/test/integration/stage/production) in wp-config.php
-* Added repair method to site visiblity routine using SITE_RELEASE_TIER for making the site public or private
+* Added repair method to site visibility routine using SITE_RELEASE_TIER for making the site public or private
 
 = 0.7.x =
 * Added repair method support for inspection routines
