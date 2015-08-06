@@ -176,8 +176,13 @@ class ACI_Routine_Check_File_Permissions {
 			if ($recursive) {
 				if ( "/*" == $folder && in_array( "/*", self::$_options['allowed_dirs'] ) ) {
 					$allowed_dir = true;
-				} else if ( !empty( $folder_base ) && false !== strpos( $file_path, $folder_base ) ) {
-					$allowed_dir = true;
+                } else if ( !empty( $folder_base ) ) {
+                    foreach( self::$_options['allowed_dirs'] as $dir ) {
+                    	if ( preg_match("|".str_replace('/*', '/.*', $dir)."|", $file_path ) ) {
+                        	$allowed_dir = true;
+                            break;
+                        }
+                    }
 				}
 			} else if ( in_array( $folder, self::$_options['allowed_dirs'] ) ) {
 				$allowed_dir = true;
