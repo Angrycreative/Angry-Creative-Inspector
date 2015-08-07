@@ -88,7 +88,7 @@ class ACI_Routine_Check_File_Permissions {
 		}
 
 		if ( is_link( rtrim( ABSPATH, '/' ) ) ) {
-			self::$_real_abspath = readlink( rtrim( ABSPATH, '/' ) );
+			self::$_real_abspath = realpath( readlink( rtrim( ABSPATH, '/' ) ) );
 		} else {
 			self::$_real_abspath = rtrim( ABSPATH, '/' );
 		}
@@ -140,9 +140,16 @@ class ACI_Routine_Check_File_Permissions {
 				return;
 			}
 
+			$original_gid = posix_getegid();
 			$original_uid = posix_geteuid();
 
-			if ( !posix_seteuid( $httpd_usr['uid'] ) ) {
+			if ( !posix_setegid( $httpd_usr['gid'] ) || $httpd_usr['gid'] != posix_getegid() ) {
+                $groupinfo = posix_getgrgid( $httpd_usr['gid'] );
+                AC_Inspector::log( 'Unable change the group of the current process to ' . $groupinfo['name'] . ' (gid: ' . $httpd_usr['gid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
+                return;
+            }
+
+			if ( !posix_seteuid( $httpd_usr['uid'] ) || $httpd_usr['uid'] != posix_geteuid() ) {
 				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ' (uid: ' . $httpd_usr['uid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
 				return;
 			}
@@ -161,7 +168,7 @@ class ACI_Routine_Check_File_Permissions {
 			$recursive = substr($folder, -2) == "/*" ? true : false;
 
 			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
-				$resolved_folder_path = readlink( self::$_real_abspath.'/'.$folder_base );
+				$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
 			} else {
 				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
 			}
@@ -220,8 +227,11 @@ class ACI_Routine_Check_File_Permissions {
 				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
 					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
 					if ( $response !== 'y' ) {
-						if ( !posix_seteuid( $original_uid ) ) {
-							AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
+							AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						}
+						if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
+							AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
 						}
 						return;
 					}
@@ -238,10 +248,10 @@ class ACI_Routine_Check_File_Permissions {
 
 				$file = str_replace('//', '/', $file);
 
-				if ( !$allowed_dir && is_writable( $file ) ) {
+				if ( !$allowed_dir && @touch($file, date('U', filemtime($file)), time() ) ) {
 					$bad_file_perm = true;
 					AC_Inspector::log( "Writable file `$file` is in a file directory that should not be writeable. Check your file permissions.", __CLASS__ );
-				} else if ( $allowed_dir && !is_writable( $file ) ) {
+				} else if ( $allowed_dir && !@touch($file, date('U', filemtime($file)), time() ) ) {
 					$bad_file_perm = true;
 					AC_Inspector::log( "Unwritable file `$file` is in a file directory that should be writeable. Check your file permissions.", __CLASS__ );
 				}
@@ -249,8 +259,11 @@ class ACI_Routine_Check_File_Permissions {
 				if ( defined( 'WP_CLI' ) && WP_CLI && $bad_file_perm && $halt_on_error ) {
 					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
 					if ( $response !== 'y' ) {
-						if ( !posix_seteuid( $original_uid ) ) {
-							AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
+							AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+						}
+						if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
+							AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
 						}
 						return;
 					}
@@ -284,8 +297,11 @@ class ACI_Routine_Check_File_Permissions {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
-			if ( !posix_seteuid( $original_uid ) ) {
-				AC_Inspector::log( 'Unable restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
+				AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			}
+			if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
+				AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
 			}
 
 		}
@@ -303,7 +319,7 @@ class ACI_Routine_Check_File_Permissions {
 		$path = rtrim( $path, '/' );
 
 		if ( is_link( $path ) ) {
-			$path = readlink( $path );
+			$path = realpath( readlink( $path ) );
 		}
 
 	    if ( is_dir( $path ) ) {
@@ -324,7 +340,7 @@ class ACI_Routine_Check_File_Permissions {
 
 		    if ( !empty( $group ) ) {
 		    	try {
-			        $chowned = @chown( $path, $group );
+			        $chowned = @chgrp( $path, $group );
 			        if ( !$chowned ) {
 			            throw new Exception( "Failed changing group ownership of directory '$path' to '$group'" );
 			        } else if ( $verbose ) {
@@ -340,12 +356,12 @@ class ACI_Routine_Check_File_Permissions {
 		    	return false;
 		    }
 
-		    $ownership_str = ( $owner ) ? 'user ' . $owner : '';
+		    $ownership_str = ( !empty( $owner ) ) ? 'user ' . $owner : '';
 		    if ( !empty( $group ) ) {
 			    if ( empty( $ownership_str ) ) {
 			    	$ownership_str = 'group ' . $group;
 			    } else {
-			    	$ownership_str = ' and group ' . $group;
+			    	$ownership_str .= ' and group ' . $group;
 			    }
 			}
 
@@ -354,7 +370,7 @@ class ACI_Routine_Check_File_Permissions {
 	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
 	                $fullpath = $path . '/' . $file;
 	                if ( is_link( $fullpath ) ) {
-						$fullpath = readlink( $fullpath );
+						$fullpath = realpath( readlink( $fullpath ) );
 					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
 	                	if ( self::chown( $fullpath, $owner, $group, $recursive ) ) {
@@ -415,7 +431,7 @@ class ACI_Routine_Check_File_Permissions {
 		$path = rtrim( $path, '/' );
 
 		if ( is_link( $path ) ) {
-			$path = readlink( $path );
+			$path = realpath( readlink( $path ) );
 		}
 
 	    if ( is_dir( $path ) ) {
@@ -440,7 +456,7 @@ class ACI_Routine_Check_File_Permissions {
 	            if ( $file != '.' && $file != '..' && $file[0] != '.' ) { // skip self and parent pointing directories as well as hidden files/dirs
 	                $fullpath = $path . '/' . $file;
 	                if ( is_link( $fullpath ) ) {
-						$fullpath = readlink( $fullpath );
+						$fullpath = realpath( readlink( $fullpath ) );
 					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
 	                	if ( self::chmod( $fullpath, $filemode, $dirmode, $recursive ) ) {
@@ -482,12 +498,12 @@ class ACI_Routine_Check_File_Permissions {
 
 	public static function repair() {
 
-		if ( !function_exists( 'posix_getuid' ) ) {
+		if ( !function_exists( 'posix_geteuid' ) ) {
 			AC_Inspector::log( 'Repairing file permissions requires a POSIX-enabled PHP server.', __CLASS__, array( 'error' => true ) );
 			return;
 		}
 
-		if ( posix_getuid() !== 0 ) {
+		if ( posix_geteuid() !== 0 ) {
 			AC_Inspector::log( 'Repairing file permissions must be performed as root.', __CLASS__, array( 'error' => true ) );
 			return;
 		}
@@ -532,7 +548,7 @@ class ACI_Routine_Check_File_Permissions {
 			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( self::$_real_abspath , '', $folder ) ) ), '/' );
 
 			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
-				$resolved_folder_path = readlink( self::$_real_abspath.'/'.$folder_base );
+				$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
 			} else {
 				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
 			}
