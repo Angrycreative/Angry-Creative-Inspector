@@ -1,17 +1,19 @@
 === Angry Creative Inspector ===
 Contributors: ac-robin, samface, angrycreative
-Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation
+Tags: inspect, inspection, monitor, monitoring, log, logging, check, checking, validate, validation, permissions, install, installation, wp-cli
 Requires at least: 4.0
-Tested up to: 4.2.2
-Stable tag: 0.8.1
+Tested up to: 4.2.4
+Stable tag: 0.8.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Inspects and logs possible issues with your Wordpress installation.
+Inspects, logs and with the aid of WP-CLI it may even repair possible issues with your Wordpress installation.
 
 == Description ==
 
-Inspects and logs possible issues with your Wordpress installation.
+Inspects, logs and with the aid of WP-CLI it may even repair possible issues with your Wordpress installation.
+
+TO-DO: Documentation :)
 
 == Installation ==
 
