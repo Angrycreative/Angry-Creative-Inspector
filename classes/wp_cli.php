@@ -39,7 +39,7 @@ class Angry_Inspector_Command extends WP_CLI_Command {
     		$routines = $all_routine_slugs;
     	}
 
-        if ( $assoc_args['force'] ) {
+        if ( array_key_exists( 'force', $assoc_args ) && !empty( $assoc_args['force'] ) ) {
             $force_inspect = true;
         }
 

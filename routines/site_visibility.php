@@ -108,9 +108,9 @@ class ACI_Routine_Check_Site_Visibility {
 			}
 
 			if ( !self::is_visible() && true === self::should_be_visible() ) {
-				AC_Inspector::log( 'The site should be visible to search engines, please check your site visibility settings.', __CLASS__, array( 'site_id' => $site_id ) );
-			} else if ( self::is_visible( $site_id ) && false === self::should_be_visible( $site_id ) ) {
-				AC_Inspector::log( 'The site should not be visible to search engines, please check your site visibility settings.', __CLASS__, array( 'site_id' => $site_id ) );
+				AC_Inspector::log( 'The site should be visible to search engines, please check your site visibility settings.', __CLASS__ );
+			} else if ( self::is_visible() && false === self::should_be_visible() ) {
+				AC_Inspector::log( 'The site should not be visible to search engines, please check your site visibility settings.', __CLASS__ );
 			}
 
 		}

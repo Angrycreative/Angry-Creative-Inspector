@@ -70,8 +70,8 @@ class ACI_Routine_Check_File_Permissions {
 		self::$_options = ACI_Routine_Handler::get_options( __CLASS__ );
 
 		if ( !is_array( self::$_options ) ) {
-	        	self::$_options = array();
-        	}
+        	self::$_options = array();
+    	}
 
 		if ( self::$_force_default_allowed_dirs ) {
 
@@ -122,36 +122,63 @@ class ACI_Routine_Check_File_Permissions {
 			}
 		}
 
+		self::$_options['allowed_dirs'] = array_filter( array_unique( self::$_options['allowed_dirs'] ) );
+
+	}
+
+	private static function switch_to_httpd_user() {
+
+		if ( !defined( 'HTTPD_USER' ) ) {
+			AC_Inspector::log( 'Unable to determine the user your web server is running as, please define HTTPD_USER in your wp-config.php.', __CLASS__, array( 'error' => true ) );
+			return false;
+		}
+
+		$httpd_usr = posix_getpwnam( HTTPD_USER );
+
+		if ( !$httpd_usr ) {
+			AC_Inspector::log( 'Unable to get retrieve information about a user named ' . HTTPD_USER . ', please check your HTTPD_USER setting in the wp-config.php file.', __CLASS__, array( 'error' => true ) );
+			return false;
+		}
+
+		$original_gid = posix_getegid();
+		$original_uid = posix_geteuid();
+
+		if ( !posix_setegid( $httpd_usr['gid'] ) || $httpd_usr['gid'] != posix_getegid() ) {
+            $groupinfo = posix_getgrgid( $httpd_usr['gid'] );
+            AC_Inspector::log( 'Unable change the group of the current process to ' . $groupinfo['name'] . ' (gid: ' . $httpd_usr['gid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
+            return false;
+        }
+
+		if ( !posix_seteuid( $httpd_usr['uid'] ) || $httpd_usr['uid'] != posix_geteuid() ) {
+			AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ' (uid: ' . $httpd_usr['uid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
+			return false;
+		}
+
+		return true;
+
+	}
+
+	private static function restore_wp_cli_user() {
+
+		if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
+			AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			return false;
+		}
+		if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
+			AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			return false;
+		}
+
+		return true;
+
 	}
 
 	public static function inspect( $folders2check = array(), $halt_on_error = true ) {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
-			if ( !defined( 'HTTPD_USER' ) ) {
-				AC_Inspector::log( 'Unable to determine the user your web server is running as, please define HTTPD_USER in your wp-config.php.', __CLASS__, array( 'error' => true ) );
-				return;
-			}
-
-			$httpd_usr = posix_getpwnam( HTTPD_USER );
-
-			if ( !$httpd_usr ) {
-				AC_Inspector::log( 'Unable to get retrieve information about a user named ' . HTTPD_USER . ', please check your HTTPD_USER setting in the wp-config.php file.', __CLASS__, array( 'error' => true ) );
-				return;
-			}
-
-			$original_gid = posix_getegid();
-			$original_uid = posix_geteuid();
-
-			if ( !posix_setegid( $httpd_usr['gid'] ) || $httpd_usr['gid'] != posix_getegid() ) {
-                $groupinfo = posix_getgrgid( $httpd_usr['gid'] );
-                AC_Inspector::log( 'Unable change the group of the current process to ' . $groupinfo['name'] . ' (gid: ' . $httpd_usr['gid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
-                return;
-            }
-
-			if ( !posix_seteuid( $httpd_usr['uid'] ) || $httpd_usr['uid'] != posix_geteuid() ) {
-				AC_Inspector::log( 'Unable change the owner of the current process to ' . HTTPD_USER . ' (uid: ' . $httpd_usr['uid'] . '), do you have the appropriate sudo privileges?', __CLASS__, array( 'error' => true ) );
-				return;
+			if ( !self::switch_to_httpd_user() ) {
+				return false;
 			}
 
 		}
@@ -164,13 +191,22 @@ class ACI_Routine_Check_File_Permissions {
 
 		foreach($folders2check as $folder) {
 
-			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( trim( ABSPATH, '/' ) , '', $folder ) ) ), '/' );
 			$recursive = substr($folder, -2) == "/*" ? true : false;
+			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( self::$_real_abspath , '', $folder ) ) ), '/' );
 
-			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
-				$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
+			if ( !file_exists( self::$_real_abspath.'/'.$folder_base ) && file_exists( '/'.$folder_base ) ) {
+				$folder_base = '/'.$folder_base;
+				if ( is_link( $folder_base ) ) {
+					$resolved_folder_path = realpath( readlink( $folder_base ) );
+				} else {
+					$resolved_folder_path = $folder_base;
+				}
 			} else {
-				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+				if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
+					$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
+				} else {
+					$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+				}
 			}
 
 			if ( !self::$_force_default_allowed_dirs && !file_exists( $resolved_folder_path ) ) {
@@ -181,7 +217,7 @@ class ACI_Routine_Check_File_Permissions {
 			$allowed_dir = false;
 
 			if ($recursive) {
-				if ( "/*" == $folder && in_array( "/*", self::$_options['allowed_dirs'] ) ) {
+				if ( in_array( $folder, self::$_options['allowed_dirs'] ) ) {
 					$allowed_dir = true;
                 } else if ( !empty( $folder_base ) ) {
                     foreach( self::$_options['allowed_dirs'] as $dir ) {
@@ -205,7 +241,7 @@ class ACI_Routine_Check_File_Permissions {
 			    if ( !$file_handle ) {
 
 			    	if ( $allowed_dir ) {
-			    		throw new Exception('Was not able to create a file in allowed folder `' . $folder_base . '`. Check your file permissions.');
+			    		throw new Exception('Was not able to create a file in allowed folder `' . $resolved_folder_path . '`. Check your file permissions.');
 			    	}
 
 				} else {
@@ -215,7 +251,7 @@ class ACI_Routine_Check_File_Permissions {
 					unlink($file_path);
 
 					if ( !$allowed_dir ) {
-			    		throw new Exception('Was able to create a file in disallowed folder `' . $folder_base . '`. Check your file permissions.');
+			    		throw new Exception('Was able to create a file in disallowed folder `' . $resolved_folder_path . '`. Check your file permissions.');
 			    	}
 
 				}
@@ -224,21 +260,19 @@ class ACI_Routine_Check_File_Permissions {
 
 				AC_Inspector::log( $e->getMessage(), __CLASS__ );
 
-				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
-					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
-					if ( $response !== 'y' ) {
-						if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
-							AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
-						}
-						if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
-							AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
-						}
-						return;
-					}
-					$halt_on_error = false;
-				}
-
 				$bad_folder_perm = true;
+
+				if ( defined( 'WP_CLI' ) && WP_CLI && $halt_on_error ) {
+					$response = cli\choose( "Bad permissions detected, continue inspecting file permissions", $choices = 'yn', $default = 'n' );
+					if ( $response == 'y' ) {
+						$halt_on_error = false;
+					} else {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							self::restore_wp_cli_user();
+						}
+						return false;
+					}
+				}
 
 			}
 
@@ -257,17 +291,15 @@ class ACI_Routine_Check_File_Permissions {
 				}
 
 				if ( defined( 'WP_CLI' ) && WP_CLI && $bad_file_perm && $halt_on_error ) {
-					$response = cli\choose( "Bad file permissions detected, continue the inspection", $choices = 'yn', $default = 'n' );
-					if ( $response !== 'y' ) {
-						if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
-							AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+					$response = cli\choose( "Bad permissions detected, continue inspecting file permissions", $choices = 'yn', $default = 'n' );
+					if ( $response == 'y' ) {
+						$halt_on_error = false;
+					} else {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							self::restore_wp_cli_user();
 						}
-						if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
-							AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
-						}
-						return;
+						return false;
 					}
-					$halt_on_error = false;
 				}
 
 			}
@@ -286,7 +318,12 @@ class ACI_Routine_Check_File_Permissions {
 					}
 
 					if ( is_array($subfolders) && count($subfolders) > 0 && !empty($subfolders[0]) ) {
-						self::inspect( $subfolders, $halt_on_error );
+						if ( false === self::inspect( $subfolders, $halt_on_error ) ) {
+							if ( defined( 'WP_CLI' ) && WP_CLI ) {
+								self::restore_wp_cli_user();
+							}
+							return false;
+						}
 					}
 
 				}
@@ -297,16 +334,13 @@ class ACI_Routine_Check_File_Permissions {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
-			if ( !posix_setegid( $original_gid ) || $original_gid != posix_getegid() ) {
-				AC_Inspector::log( 'Unable to restore the group of the current process (gid: ' . $original_gid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
-			}
-			if ( !posix_seteuid( $original_uid ) || $original_uid != posix_geteuid() ) {
-				AC_Inspector::log( 'Unable to restore the owner of the current process (uid: ' . $original_uid . '). File permissions will have to be repaired manually.', __CLASS__, array( 'error' => true ) );
+			if ( !self::restore_wp_cli_user() ) {
+				return false;
 			}
 
 		}
 
-		return;
+		return true;
 
 	}
 
@@ -318,8 +352,12 @@ class ACI_Routine_Check_File_Permissions {
 
 		$path = rtrim( $path, '/' );
 
-		if ( is_link( $path ) ) {
+		if ( !empty( $path ) && is_link( $path ) ) {
 			$path = realpath( readlink( $path ) );
+		}
+
+		if ( empty( $path ) ) {
+			return;
 		}
 
 	    if ( is_dir( $path ) ) {
@@ -373,7 +411,7 @@ class ACI_Routine_Check_File_Permissions {
 						$fullpath = realpath( readlink( $fullpath ) );
 					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
-	                	if ( self::chown( $fullpath, $owner, $group, $recursive ) ) {
+	                	if ( false !== self::chown( $fullpath, $owner, $group, $recursive ) ) {
 	                		if ( is_dir( $fullpath ) && $verbose ) {
 	                			AC_Inspector::log( "Changed ownership of files in '$fullpath' to $ownership_str", __CLASS__, array( 'success' => true ) );
 	                		}
@@ -430,8 +468,12 @@ class ACI_Routine_Check_File_Permissions {
 
 		$path = rtrim( $path, '/' );
 
-		if ( is_link( $path ) ) {
+		if ( !empty( $path ) && is_link( $path ) ) {
 			$path = realpath( readlink( $path ) );
+		}
+
+		if ( empty( $path ) ) {
+			return;
 		}
 
 	    if ( is_dir( $path ) ) {
@@ -459,7 +501,7 @@ class ACI_Routine_Check_File_Permissions {
 						$fullpath = realpath( readlink( $fullpath ) );
 					}
 	                if ( $recursive || !is_dir( $fullpath ) ) {
-	                	if ( self::chmod( $fullpath, $filemode, $dirmode, $recursive ) ) {
+	                	if ( false !== self::chmod( $fullpath, $filemode, $dirmode, $recursive ) ) {
 	                		if ( is_dir( $fullpath ) && $verbose ) {
 	                			AC_Inspector::log( "Applied filemode '$filemode_str' on files in '$fullpath'", __CLASS__, array( 'success' => true ) );
 	                		}
@@ -533,7 +575,7 @@ class ACI_Routine_Check_File_Permissions {
 			WP_CLI::confirm( "Skip setting user permissions and attempt to set just group permissions instead?" );
 		}
 
-		if ( !self::chown( self::$_real_abspath, $owner, $group, true, true ) ) {
+		if ( false === self::chown( self::$_real_abspath, $owner, $group, true, true ) ) {
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				WP_CLI::confirm( "There where errors while trying to set file ownerships (chown), proceed with setting file permissions (chmod) anyway?" );
 			} else {
@@ -541,16 +583,27 @@ class ACI_Routine_Check_File_Permissions {
 			}
 		}
 
-		self::chmod( self::$_real_abspath, 0644, 0755, true, true );
+		if ( count( self::$_options['allowed_dirs'] ) != 1 || !in_array( '/*', self::$_options['allowed_dirs'] ) ) {
+			self::chmod( self::$_real_abspath, 0644, 0755, true, true );
+		}
 
 		foreach(self::$_options['allowed_dirs'] as $folder) {
 
 			$folder_base = trim( str_replace( '/*', '', str_replace('//', '/', str_replace( self::$_real_abspath , '', $folder ) ) ), '/' );
 
-			if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
-				$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
+			if ( !file_exists( self::$_real_abspath.'/'.$folder_base ) && file_exists( '/'.$folder_base ) ) {
+				$folder_base = '/'.$folder_base;
+				if ( is_link( $folder_base ) ) {
+					$resolved_folder_path = realpath( readlink( $folder_base ) );
+				} else {
+					$resolved_folder_path = $folder_base;
+				}
 			} else {
-				$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+				if ( is_link( self::$_real_abspath.'/'.$folder_base ) ) {
+					$resolved_folder_path = realpath( readlink( self::$_real_abspath.'/'.$folder_base ) );
+				} else {
+					$resolved_folder_path = self::$_real_abspath.'/'.$folder_base;
+				}
 			}
 
 			if ( !self::$_force_default_allowed_dirs && !file_exists( $resolved_folder_path ) ) {
