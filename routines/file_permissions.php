@@ -173,6 +173,73 @@ class ACI_Routine_Check_File_Permissions {
 
 	}
 
+	private static function file_user_may( $file_op, $file, $user = '' ) {
+
+		if ( empty( $file_op ) ) {
+			return false;
+		}
+
+		if ( empty( $file ) ) {
+			return false;
+		}
+
+		if ( empty( $user ) ) {
+			if ( defined( 'FS_USER' ) ) {
+				$user = FS_USER;
+			} else if ( defined( 'FTP_USER' ) ) {
+				$user = FTP_USER;
+			} else {
+				$process_user_info = posix_getpwuid(posix_geteuid());
+				$user = $process_user_info['name'];
+			}
+		}
+
+		$file_ops = array( 'r' => 'read', 'w' => 'write', 'x' => 'execute' );
+
+		if ( in_array( $file_op, $file_ops ) ) {
+			$req_perm_bit = array_search( $file_op, $file_ops );
+		} else if ( in_array( $file_op, array_keys( $file_ops ) ) ) {
+			$req_perm_bit = $file_op;
+		} else {
+			return false;
+		}
+
+		clearstatcache();
+
+		$file_owner_info = posix_getpwuid( fileowner( $file ) );
+		$file_group_info = posix_getgrgid( filegroup( $file ) );
+		$file_perms = fileperms( $file );
+
+		$file_perm_bits = '';
+
+		if ( $user == $file_owner_info['name'] ) {
+
+			$file_perm_bits .= (($file_perms & 0x0100) ? 'r' : '-');
+			$file_perm_bits .= (($file_perms & 0x0080) ? 'w' : '-');
+			$file_perm_bits .= (($file_perms & 0x0040) ? 'x' : '-');
+
+		} else if ( in_array( $user, $file_group_info['members'] ) ) {
+
+        	$file_perm_bits .= (($file_perms & 0x0020) ? 'r' : '-');
+			$file_perm_bits .= (($file_perms & 0x0010) ? 'w' : '-');
+			$file_perm_bits .= (($file_perms & 0x0008) ? 'x' : '-');
+
+        } else {
+
+        	$file_perm_bits .= (($file_perms & 0x0004) ? 'r' : '-');
+			$file_perm_bits .= (($file_perms & 0x0002) ? 'w' : '-');
+			$file_perm_bits .= (($file_perms & 0x0001) ? 'x' : '-');
+
+        }
+
+        if ( false !== strpos( $file_perm_bits, $req_perm_bit ) ) {
+        	return true;
+        }
+
+        return false;
+
+	}
+
 	public static function inspect( $folders2check = array(), $halt_on_error = true ) {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -282,10 +349,10 @@ class ACI_Routine_Check_File_Permissions {
 
 				$file = str_replace('//', '/', $file);
 
-				if ( !$allowed_dir && @touch($file, date('U', filemtime($file)), time() ) ) {
+				if ( !$allowed_dir && self::file_user_may( 'w', $file ) ) {
 					$bad_file_perm = true;
 					AC_Inspector::log( "Writable file `$file` is in a file directory that should not be writeable. Check your file permissions.", __CLASS__ );
-				} else if ( $allowed_dir && !@touch($file, date('U', filemtime($file)), time() ) ) {
+				} else if ( $allowed_dir && !self::file_user_may( 'w', $file ) ) {
 					$bad_file_perm = true;
 					AC_Inspector::log( "Unwritable file `$file` is in a file directory that should be writeable. Check your file permissions.", __CLASS__ );
 				}
@@ -362,20 +429,6 @@ class ACI_Routine_Check_File_Permissions {
 
 	    if ( is_dir( $path ) ) {
 
-	    	if ( !empty( $owner ) ) {
-	    		try {
-	    			$chowned = @chown( $path, $owner );
-			        if ( !$chowned ) {
-			            throw new Exception( "Failed changing user ownership of directory '$path' to '$owner'" );
-			        } else if ( $verbose ) {
-			        	AC_Inspector::log( "Changed user ownership of directory '$path' to '$owner'", __CLASS__, array( 'success' => true ) );
-			        }
-			    } catch ( Exception $e ) {
-					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
-					$owner = '';
-				}
-		    }
-
 		    if ( !empty( $group ) ) {
 		    	try {
 			        $chowned = @chgrp( $path, $group );
@@ -387,6 +440,20 @@ class ACI_Routine_Check_File_Permissions {
 			    } catch ( Exception $e ) {
 					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
 					$group = '';
+				}
+		    }
+
+	    	if ( !empty( $owner ) ) {
+	    		try {
+	    			$chowned = @chown( $path, $owner );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing user ownership of directory '$path' to '$owner'" );
+			        } else if ( $verbose ) {
+			        	AC_Inspector::log( "Changed user ownership of directory '$path' to '$owner'", __CLASS__, array( 'success' => true ) );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$owner = '';
 				}
 		    }
 
@@ -430,18 +497,6 @@ class ACI_Routine_Check_File_Permissions {
 
 	    } else {
 
-	        if ( !empty( $owner ) ) {
-	        	try {
-			        $chowned = @chown( $path, $owner );
-			        if ( !$chowned ) {
-			            throw new Exception( "Failed changing user ownership of file '$path' to '$owner'" );
-			        }
-			    } catch ( Exception $e ) {
-					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
-					$owner = '';
-				}
-		    }
-
 		    if ( !empty( $group ) ) {
 		        try {
 			        $chowned = @chown( $path, $group );
@@ -451,6 +506,18 @@ class ACI_Routine_Check_File_Permissions {
 			    } catch ( Exception $e ) {
 					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
 					$group = '';
+				}
+		    }
+
+	        if ( !empty( $owner ) ) {
+	        	try {
+			        $chowned = @chown( $path, $owner );
+			        if ( !$chowned ) {
+			            throw new Exception( "Failed changing user ownership of file '$path' to '$owner'" );
+			        }
+			    } catch ( Exception $e ) {
+					AC_Inspector::log( $e->getMessage(), __CLASS__, array( 'error' => true ) );
+					$owner = '';
 				}
 		    }
 
