@@ -119,6 +119,7 @@ Happy... no wait, angry inspecting! :)
 3. Make sure the right log file path is set under the 'Settings/AC Inspector' menu in Wordpress
 4. To get the file permissions and site visibility routines working properly, edit wp-config.php and add the following (before "That's all, stop editing!"):
 
+	
 	define("DISALLOW_FILE_MODS", true);
 	//define("FS_METHOD", "direct");
 	
