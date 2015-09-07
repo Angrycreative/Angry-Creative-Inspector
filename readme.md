@@ -126,20 +126,23 @@ Happy... no wait, angry inspecting! :)
 3. Make sure the right log file path is set under the 'Settings/AC Inspector' menu in Wordpress
 4. To get the file permissions and site visibility routines working properly, edit wp-config.php and add the following (before "That's all, stop editing!"):
 
+	
 	//define("FS_METHOD", "direct");
 	define("DISALLOW_FILE_MODS", true);
 	define("HTTPD_USER", "www-data"); // The user of your HTTP-daemon (Apache/Nginx/Lighttpd/etc)
 	define("FS_USER", "my-user"); // The username/accountname you login and maintain your wordpress install with
 	define("SITE_RELEASE_TIER", "production"); // Possible values: 'local', 'development', 'integration', 'test', 'stage', 'production'
-
+	
 
 Setting FS_METHOD to 'direct' will ensure write permissions in your entire Wordpress-directory for FS_USER as well as HTTPD_USER, while enabling DISALLOW_FILE_MODS will restrict the HTTPD_USER to only having write permissions as configured under the 'Settings/AC Inspector' menu. Default allowed dirs:
 
+	
 	wp-content/uploads/*
 	wp-content/blogs.dir/*
 	wp-content/cache/*
 	wp-content/avatars/*
 	wp-content/*/LC_MESSAGES/*
+	
 
 Setting SITE_RELEASE_TIER helps the inspector determine wether the site should allow search engine indexing or not. Forgetting to block search engines in a development or staging site can have terrible results on your search engine ranking.
 
