@@ -11,7 +11,7 @@ Inspects, logs and with the aid of WP-CLI, it may even repair possible issues wi
 
 == Description ==
 
-The *Angry Creative Inspector*, or Angry Inspector for short, will weigh, measure and find possible issues with your WordPress installation. Got WP-CLI? Then you may even be able to repair what's wrong with your WordPress. Read on to learn more.
+The *Angry Creative Inspector*, or Angry Inspector for short, will weigh, measure and find possible issues with your WordPress installation. This plugin is especially recommended to maintainers of WordPress installations that needs to continously monitor the health of their sites. Got WP-CLI? Then you may even be able to repair what's wrong with your WordPress. Read on to learn more.
 
 The inspector has two basic types of inspection routines; regularly repeating inspections run once every 24 hours and inspections triggered by a WordPress hook or user action. Currently, the following regularly running inspection routines are supported out of the box:
 
