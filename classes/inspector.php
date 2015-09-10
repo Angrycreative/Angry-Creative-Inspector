@@ -1,7 +1,7 @@
 <?php 
 /*
 Class name: AC Inspector
-Version: 0.7
+Version: 1.0
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -19,17 +19,15 @@ if(!class_exists('AC_Inspector')) {
 
 		private static $_default_log_path = "";
 		private static $_log_levels = array();
-		
+
 		public function __construct() {
 
 			if ( !isset( self::$_this ) ) {
 
 				self::$_this = $this;
-
 				self::$_default_log_path = ACI_PLUGIN_DIR . '/inspection.log';
 
 				$this->_get_log_path();
-
 				$this->_check_log_path();
 
 				// Define log levels
@@ -42,8 +40,28 @@ if(!class_exists('AC_Inspector')) {
 
 				$this->_on_update();
 
-				add_action( 'ac_inspection', function() {
-					AC_Inspector::log("Inspection completed with " . AC_Inspector::$log_count . " remarks.");
+				if ( defined('WP_CLI') && WP_CLI ) {
+					// Clear scheduled inspections if running from CLI...
+					self::deactivate();
+				}
+
+				add_action( 'plugins_loaded', array( __CLASS__, 'load_textdomain' ) );
+
+				$schedules = wp_get_schedules();
+				foreach( array_keys( $schedules ) as $schedule ) {
+
+					add_action( 'ac_inspection_'.$schedule, function() {
+						do_action( 'ac_inspection_complete' );
+						$current_schedule = str_replace( 'ac_inspection_', '', current_filter() );
+						$schedules = wp_get_schedules();
+						AC_Inspector::log( printf( __( ucfirst( $schedules[$current_schedule]['display'] ) . ' inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count );
+					}, 999, 0 );
+
+				}
+
+				add_action( 'ac_inspection_now', function() {
+					do_action( 'ac_inspection_complete' );
+					AC_Inspector::log( printf( __( 'Instant inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count );
 				}, 999, 0 );
 
 			}
@@ -57,23 +75,35 @@ if(!class_exists('AC_Inspector')) {
 		/* Add Cron Job on activation, that test permissions etc. */
 		public static function activate() { 
 
-			if ( !wp_next_scheduled( 'ac_inspection' ) ) {
+			$schedules = wp_get_schedules();
 
-				wp_schedule_event( time(), 'daily', 'ac_inspection');
-
+			foreach( array_keys( $schedules ) as $schedule ) {
+				if ( !wp_next_scheduled( 'ac_inspection_'.$schedule ) ) {
+					wp_schedule_event( time(), $schedule, 'ac_inspection_'.$schedule );
+				}
 			}
 
 		}
 
 		/* Clear job on deactivation */
-		public static function deactivate() { 
+		public static function deactivate() {
 
-			wp_clear_scheduled_hook( 'ac_inspection');
-		
+			$schedules = wp_get_schedules();
+
+			foreach( array_keys( $schedules ) as $schedule ) {
+				if ( wp_next_scheduled( 'ac_inspection_'.$schedule ) ) {
+					wp_clear_scheduled_hook( 'ac_inspection_'.$schedule );
+				}
+			}
+
 		}
 
 		/* Plugin update actions */
 		private function _on_update() {
+
+			if ( wp_next_scheduled( 'ac_inspection' ) ) {
+				wp_clear_scheduled_hook( 'ac_inspection');
+			}
 
 			$saved_version = self::get_option( __CLASS__.'_Version', ACI_PLUGIN_VERSION );
 
@@ -88,9 +118,15 @@ if(!class_exists('AC_Inspector')) {
 
 		}
 
+		public static function load_textdomain() {
+
+			load_plugin_textdomain( ACI_PLUGIN_TEXTDOMAIN, false, ACI_PLUGIN_DIR . '/languages' ); 
+
+		}
+
 		public static function get_log_levels() {
 
-			return self::$_log_levels;
+			return apply_filters( 'ac_inspector_log_levels', self::$_log_levels );
 
 		}
 
@@ -156,8 +192,10 @@ if(!class_exists('AC_Inspector')) {
 					self::update_option( 'ac_inspector_log_path', self::$_default_log_path );
 
 				}
-				
+
 			}
+
+			self::$log_path = apply_filters( 'ac_inspector_log_path', self::$log_path );
 
 		}
 
@@ -167,7 +205,7 @@ if(!class_exists('AC_Inspector')) {
 
 				if ( !is_writable( self::$log_path ) ) {
 
-					self::$errors[] = 'Log file exists but is not writable.';
+					self::$errors[] = __( 'Log file exists but is not writable.', ACI_PLUGIN_TEXTDOMAIN );
 
 					return false;
 
@@ -177,7 +215,7 @@ if(!class_exists('AC_Inspector')) {
 
 				if ( !is_dir( dirname(self::$log_path) ) ) {
 
-					self::$errors[] = 'Invalid log file directory.';
+					self::$errors[] = __( 'Invalid log file directory.', ACI_PLUGIN_TEXTDOMAIN );
 
 				} else {
 
@@ -185,7 +223,7 @@ if(!class_exists('AC_Inspector')) {
 
 				    if ( !$file_handle ) {
 
-	        			self::$errors[] = 'Unable to create log file.';
+	        			self::$errors[] = __( 'Unable to create log file.', ACI_PLUGIN_TEXTDOMAIN );
 
 	        			return false;
 
@@ -200,16 +238,22 @@ if(!class_exists('AC_Inspector')) {
 		}
 
 		public static function download_log() {
+
 			if ( file_exists( self::$log_path ) ) {
+
 				header( "Content-type: application/x-msdownload", true, 200 );
 				header( "Content-Disposition: attachment; filename=ac_inspection.log" );
 				header( "Pragma: no-cache" );
 				header( "Expires: 0" );
 				echo file_get_contents( self::$log_path );
 				exit();
+
 			} else {
-				self::log( 'Failed to download log file: File does not exist.' );
+
+				self::log( __( 'Failed to download log file: File does not exist.', ACI_PLUGIN_TEXTDOMAIN ), array( 'error' => true ) );
+
 			}
+
 		}
 
 		public static function clear_log() {
@@ -224,7 +268,7 @@ if(!class_exists('AC_Inspector')) {
 					global $current_user;
 					get_currentuserinfo();
 
-					self::log('Log cleared by ' . $current_user->display_name);
+					self::log( printf( __( 'Log cleared by %s', ACI_PLUGIN_TEXTDOMAIN ), $current_user->display_name );
 
 					return true;
 
@@ -238,9 +282,9 @@ if(!class_exists('AC_Inspector')) {
 
 		public function inspect() {
 
-			if ( !did_action( 'ac_inspection' ) ) {
+			if ( !did_action( 'ac_inspection_now' ) ) {
 
-				do_action( 'ac_inspection' );
+				do_action( 'ac_inspection_now' );
 
 			}
 
@@ -365,6 +409,15 @@ if(!class_exists('AC_Inspector')) {
 	        	}
 
 	        }
+
+		}
+
+		public function __destruct() {
+
+			if ( defined('WP_CLI') && WP_CLI ) {
+				// Re-enable scheduled inspections if running from CLI...
+				self::activate();
+			}
 
 		}
 

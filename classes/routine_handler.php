@@ -1,8 +1,8 @@
 <?php
 /*
 Class name: ACI Routine Handler
-Version: 0.4
-Depends: AC Inspector 0.5.x or newer
+Version: 1.0
+Depends: AC Inspector 1.0 or newer
 Author: Sammy Nordström, Angry Creative AB
 */
 
@@ -11,7 +11,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 	class ACI_Routine_Handler {
 
 		private static $force_enabled = array();
-		private static $routine_events = array();
+		private static $routine_triggers = array();
 
 		public static function routine_options_key($routine) {
 
@@ -36,6 +36,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				return false;
 			}
 
+			$inspection_method = '';
+
 			if ( !is_array( $options ) || empty( $options ) ) {
 
 				$options = self::get_options( $routine );
@@ -50,27 +52,27 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 				if ( !empty( $options['inspection_method'] ) && method_exists( $routine, $options['inspection_method'] ) ) {
 
-					return array( $routine, $options['inspection_method'] );
+					$inspection_method = array( $routine, $options['inspection_method'] );
 
 				} else if ( method_exists( $routine, 'inspect' ) ) {
 
-					return array( $routine, 'inspect' );
+					$inspection_method = array( $routine, 'inspect' );
 
 				}
 
-			} 
+			}
 
 			if ( !empty( $options['inspection_method'] ) && function_exists( $options['inspection_method'] ) ) {
 
-				return $options['inspection_method'];
+				$inspection_method = $options['inspection_method'];
 
 			} else if ( function_exists( $routine ) ) {
 
-				return $routine;
+				$inspection_method = $routine;
 
 			}
 
-			return false;
+			return apply_filters( 'ac_inspector_'.$routine.'_inspection_method', $inspection_method );
 
 		}
 
@@ -79,6 +81,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 			if ( empty( $routine ) ) {
 				return false;
 			}
+
+			$repair_method = '';
 
 			if ( !is_array( $options ) || empty( $options ) ) {
 
@@ -94,29 +98,29 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 				if ( !empty( $options['repair_method'] ) && method_exists( $routine, $options['repair_method'] ) ) {
 
-					return array( $routine, $options['repair_method'] );
+					$repair_method = array( $routine, $options['repair_method'] );
 
 				} else if ( method_exists( $routine, 'repair' ) ) {
 
-					return array( $routine, 'repair' );
+					$repair_method = array( $routine, 'repair' );
 
 				}
 
-			} 
+			}
 
 			if ( !empty( $options['repair_method'] ) && function_exists( $options['repair_method'] ) ) {
 
-				return $options['repair_method'];
+				$repair_method = $options['repair_method'];
 
 			}
 
-			return false;
+			return apply_filters( 'ac_inspector_'.$routine.'_repair_method', $repair_method );
 
 		}
 
 		public static function set_options($routine, $args = array()) {
 
-			if (empty($routine)) {
+			if ( empty( $routine ) ) {
 				return false;
 			}
 
@@ -175,7 +179,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			}
 
-			return $options;
+			return apply_filters( 'ac_inspector_'.$routine.'_options', $options );
 
 		}
 
@@ -199,7 +203,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function release_tier_aware() {
 
-			if ( defined( 'SITE_RELEASE_TIER' ) ) {
+			if ( defined( 'SITE_RELEASE_TIER' ) || apply_filters( 'ac_inspector_site_release_tier', '' ) ) {
 				return true;
 			}
 
@@ -209,17 +213,25 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		public static function get_release_tier() {
 
+			$site_release_tier = '';
+
 			if ( defined( 'SITE_RELEASE_TIER' ) && in_array( SITE_RELEASE_TIER, array( 'local', 'development', 'integration', 'test', 'stage', 'production' ) ) ) {
-				return SITE_RELEASE_TIER;
+				$site_release_tier = SITE_RELEASE_TIER;
 			}
 
-			return false;
+			return apply_filters( 'ac_inspector_site_release_tier', SITE_RELEASE_TIER );
 
 		}
 
 		public static function is_release_tier( $tier ) {
 
-			if ( defined( 'SITE_RELEASE_TIER' ) && !empty( $tier ) && $tier == SITE_RELEASE_TIER ) {
+			if ( empty( $tier ) ) {
+				return false;
+			}
+
+			$site_release_tier = self::get_release_tier();
+
+			if ( $tier == $site_release_tier ) {
 				return true;
 			}
 
@@ -227,7 +239,7 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 		}
 
-		public static function add( $routine, $options = array(), $action = "ac_inspection", $priority = 10, $accepted_args = 1 ) {
+		public static function add( $routine, $options = array(), $trigger = "daily", $priority = 10, $accepted_args = 1 ) {
 
 			$inspection_method = self::get_inspection_method( $routine, $options );
 
@@ -235,19 +247,26 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				return false;
 			}
 
-			if ( empty( $action ) ) {
-				$action = "ac_inspection";
+			if ( empty( $trigger ) || $trigger == 'ac_inspection' ) {
+				$trigger = 'daily';
 			}
 
-			if ( !array_key_exists( $routine, self::$routine_events ) || !is_array( self::$routine_events[$routine] ) ) {
-				self::$routine_events[$routine] = array();
+			$schedules = wp_get_schedules();
+			if ( in_array( $trigger, array_keys( $schedules ) ) ) {
+				$action = "ac_inspection_".$trigger;
+			} else {
+				$action = $trigger;
 			}
 
-			if ( in_array( $action, self::$routine_events[$routine] ) ) {
+			if ( !array_key_exists( $routine, self::$routine_triggers ) || !is_array( self::$routine_triggers[$routine] ) ) {
+				self::$routine_triggers[$routine] = array();
+			}
+
+			if ( in_array( $action, self::$routine_triggers[$routine] ) ) {
 				return false;
 			}
 
-			self::$routine_events[$routine][] = $action;
+			self::$routine_triggers[$routine][] = $action;
 
 			if ( has_action( $action, $inspection_method ) === $priority ) {
 				return false;
@@ -277,109 +296,137 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				if ( $options[$current_site_id]['log_level'] == 'ignore' ) {
 					return true;
 				}
-			} else if ( $options['log_level'] == 'ignore' ) {
-				return true;
+				if ( !empty( $options[$current_site_id]['schedule'] ) && in_array( $options[$current_site_id]['schedule'], $schedules ) ) {
+					$action = "ac_inspection_".$options[$current_site_id]['schedule'];
+				}
+			} else {
+				if ( $options['log_level'] == 'ignore' ) {
+					return true;
+				}
+				if ( !empty( $options['schedule'] ) && in_array( $options['schedule'], $schedules ) ) {
+					$action = "ac_inspection_".$options['schedule'];
+				}
 			}
 
 			add_action( $action, $inspection_method, $priority, $accepted_args );
+			add_action( 'ac_inspection_now', $inspection_method, $priority, $accepted_args );
 
 			return true;
 
 		}
 
-		public static function remove($routine, $action = "", $priority = 10) {
+		public static function remove( $routine, $action = "", $priority = 10 ) {
 
 			if ( empty( $routine ) ) {
 				return false;
 			}
 
-			if ( !is_array(self::$routine_events[$routine]) || count(self::$routine_events[$routine]) == 0 ) {
+			if ( !is_array(self::$routine_triggers[$routine]) || count(self::$routine_triggers[$routine]) == 0 ) {
 				return false;
 			}
 
-			if ( $action_key = array_search( $action, self::$routine_events[$routine] ) ) {
+			if ( $action_key = array_search( $action, self::$routine_triggers[$routine] ) ) {
 
-				remove_action( $routine_events[$routine][$action_key], $routine, $priority );
+				remove_action( $routine_triggers[$routine][$action_key], $routine, $priority );
 
 			}
 
-			unset( self::$routine_events[$routine] );
-			
+			unset( self::$routine_triggers[$routine] );
+
 			return true;
 
 		}
 
-		public static function get_event_routines($event) {
+		public static function get_trigger_routines( $trigger ) {
 
-			if ( empty( $event) ) {
+			if ( empty( $trigger ) ) {
 				return false;
 			}
 
-			$event_routines = array();
+			$trigger_routines = array();
 
-			foreach( array_keys( self::$routine_events ) as $routine ) {
-				if ( in_array( $event, self::$routine_events[$routine] ) ) {
-					$event_routines[] = $routine;
+			foreach( array_keys( self::$routine_triggers ) as $routine ) {
+				if ( in_array( $trigger, self::$routine_triggers[$routine] ) ) {
+					$trigger_routines[] = $routine;
 				}
 			}
 
-			return $event_routines;
+			return apply_filters( 'ac_inspector_'.$trigger.'_routines', $trigger_routines );
 
 		}
 
-		public static function get_routine_events($routine) {
+		public static function get_routine_triggers( $routine ) {
 
 			if (empty($routine)) {
 				return false;
 			}
 
-			return self::$routine_events[$routine];
+			return apply_filters( 'ac_inspector_'.$routine.'_triggers', self::$routine_triggers[$routine] );
 
-		}	
+		}
 
-		public static function get_events() {
+		public static function get_triggers() {
 
-			$events = array();
+			$triggers = array();
 
-			foreach(array_keys(self::$routine_events) as $routine) {
-				foreach(self::$routine_events[$routine] as $event) {
-					if (!in_array($event, $events)) {
-						$events[] = $event;
+			foreach(array_keys(self::$routine_triggers) as $routine) {
+				foreach(self::$routine_triggers[$routine] as $trigger) {
+					if (!in_array($trigger, $triggers)) {
+						$triggers[] = $trigger;
 					}
 				}
 			}
 
-			return $events;
+			return apply_filters( 'ac_inspector_routine_triggers', $triggers );
 
 		}
 
-		public static function get_inspection_routines() {
+		public static function get_scheduled_routines() {
 
-			return self::get_event_routines('ac_inspection');
+			$schedules = wp_get_schedules();
+			$scheduled_routines = array();
+
+			foreach( array_keys( $schedules ) as $schedule ) {
+				$scheduled_routines = array_merge( $scheduled_routines, self::get_trigger_routines( 'ac_inspection_'.$schedule ) );
+			}
+
+			return apply_filters( 'ac_inspector_scheduled_routines', $scheduled_routines );
 
 		}
 
-		public static function get_wp_hook_routines() {
+		public static function get_hooked_routines() {
 
-			$wp_hook_routines = array();
+			$hooked_routines = array();
+			$schedules = wp_get_schedules();
 
-			foreach(array_keys(self::$routine_events) as $routine) {
-				foreach(self::$routine_events[$routine] as $event) {
-					if ($event != 'ac_inspection' && !in_array($routine, $wp_hook_routines)) {
-						$wp_hook_routines[] = $routine;
+			foreach(array_keys(self::$routine_triggers) as $routine) {
+				foreach(self::$routine_triggers[$routine] as $trigger) {
+					if ( !in_array( $trigger, array_keys( $schedules ) ) && !in_array( $routine, $hooked_routines ) ) {
+						$hooked_routines[] = $routine;
 						break;
 					}
-					
 				}
 			}
 
-			return $wp_hook_routines;
+			return apply_filters( 'ac_inspector_hooked_routines', $hooked_routines );
 
 		}
 
 		public static function get_all() {
 
-			return self::$routine_events;
+			return apply_filters( 'ac_inspector_all_routines', self::$routine_triggers );
+
+		}
+
+		public static function is_scheduled( $routine ) {
+
+			if ( !is_array( self::$routine_triggers ) || !array_key_exists( $routine , self::$routine_triggers ) ) {
+				return false;
+			}
+
+			$schedules = wp_get_schedules();
+
+			return ( count ( array_intersect( array_keys( $schedules ), self::$routine_triggers[$routine] ) ) >= 1 ) ? true : false;
 
 		}
 
