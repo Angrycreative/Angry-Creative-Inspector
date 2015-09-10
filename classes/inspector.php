@@ -268,7 +268,7 @@ if(!class_exists('AC_Inspector')) {
 					global $current_user;
 					get_currentuserinfo();
 
-					self::log( printf( __( 'Log cleared by %s', ACI_PLUGIN_TEXTDOMAIN ), $current_user->display_name );
+					self::log( sprintf( __( 'Log cleared by %s', ACI_PLUGIN_TEXTDOMAIN ), $current_user->display_name ) );
 
 					return true;
 
