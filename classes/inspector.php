@@ -54,7 +54,7 @@ if(!class_exists('AC_Inspector')) {
 						do_action( 'ac_inspection_complete' );
 						$current_schedule = str_replace( 'ac_inspection_', '', current_filter() );
 						$schedules = wp_get_schedules();
-						AC_Inspector::log( printf( __( ucfirst( $schedules[$current_schedule]['display'] ) . ' inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count );
+						AC_Inspector::log( sprintf( __( ucfirst( $schedules[$current_schedule]['display'] ) . ' inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
 					}, 999, 0 );
 
 				}
