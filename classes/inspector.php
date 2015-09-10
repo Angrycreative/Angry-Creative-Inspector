@@ -61,7 +61,7 @@ if(!class_exists('AC_Inspector')) {
 
 				add_action( 'ac_inspection_now', function() {
 					do_action( 'ac_inspection_complete' );
-					AC_Inspector::log( printf( __( 'Instant inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count );
+					AC_Inspector::log( sprintf( __( 'Instant inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
 				}, 999, 0 );
 
 			}
