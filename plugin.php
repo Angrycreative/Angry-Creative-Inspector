@@ -46,8 +46,8 @@ if (is_admin()) {
 if ( class_exists( 'AC_Inspector' ) ) {
 
 	// Installation and uninstallation hooks
-	register_activation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'activate') );
-	register_deactivation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'deactivate') );
+	register_activation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'schedule_inspections') );
+	register_deactivation_hook( ACI_PLUGIN_FILE, array('AC_Inspector', 'unschedule_inspections') );
 
 	if (is_admin()) {
 		$ac_inspector = new ACI_Settings();

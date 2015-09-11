@@ -5,9 +5,9 @@ Version: 1.0
 Author: Sammy Nordström, Angry Creative AB
 */
 
-if(!class_exists('AC_Inspector')) { 
+if(!class_exists('AC_Inspector')) {
 
-	class AC_Inspector { 
+	class AC_Inspector {
 
 		private static $_this;
 
@@ -42,27 +42,12 @@ if(!class_exists('AC_Inspector')) {
 
 				if ( defined('WP_CLI') && WP_CLI ) {
 					// Clear scheduled inspections if running from CLI...
-					self::deactivate();
+					self::unschedule_inspections();
+				} else {
+					add_action( 'cron_schedules', array( __CLASS__, 'schedule_inspections' ), 999, 1 );
 				}
 
 				add_action( 'plugins_loaded', array( __CLASS__, 'load_textdomain' ) );
-
-				$schedules = wp_get_schedules();
-				foreach( array_keys( $schedules ) as $schedule ) {
-
-					add_action( 'ac_inspection_'.$schedule, function() {
-						do_action( 'ac_inspection_complete' );
-						$current_schedule = str_replace( 'ac_inspection_', '', current_filter() );
-						$schedules = wp_get_schedules();
-						AC_Inspector::log( sprintf( __( ucfirst( $schedules[$current_schedule]['display'] ) . ' inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
-					}, 999, 0 );
-
-				}
-
-				add_action( 'ac_inspection_now', function() {
-					do_action( 'ac_inspection_complete' );
-					AC_Inspector::log( sprintf( __( 'Instant inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
-				}, 999, 0 );
 
 			}
 
@@ -72,23 +57,62 @@ if(!class_exists('AC_Inspector')) {
 		    return self::$_this;
 		}
 
-		/* Add Cron Job on activation, that test permissions etc. */
-		public static function activate() { 
-
+		public static function inspection_complete() {
+			do_action( 'ac_inspection_complete' );
+			$current_schedule = str_replace( 'ac_inspection_', '', current_filter() );
 			$schedules = wp_get_schedules();
+			if ( 'now' == $current_schedule ) {
+				AC_Inspector::log( sprintf( __( 'Instant inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
+			} else {
+				AC_Inspector::log( sprintf( __( ucfirst( $schedules[$current_schedule]['display'] ) . ' inspection completed with %d remarks.', ACI_PLUGIN_TEXTDOMAIN ), AC_Inspector::$log_count ) );
+			}
+			AC_Inspector::$log_count = 0;
+		}
+
+		public static function schedule_inspections( $schedules = array() ) {
+
+			global $wp_filter;
+			$return_schedules = false;
+
+			if ( 'cron_schedules' == current_filter() ) {
+				remove_filter( 'cron_schedules', array( __CLASS__, __FUNCTION__ ), 999 );
+			}
+
+			if ( !is_array( $schedules ) || count( $schedules ) <= 0 ) {
+				$schedules = wp_get_schedules();
+			} else {
+				$return_schedules = true;
+				self::unschedule_inspections();
+			}
 
 			foreach( array_keys( $schedules ) as $schedule ) {
 				if ( !wp_next_scheduled( 'ac_inspection_'.$schedule ) ) {
 					wp_schedule_event( time(), $schedule, 'ac_inspection_'.$schedule );
 				}
+				if ( !has_action( 'ac_inspection_'.$schedule, array( __CLASS__, 'inspection_complete' ) ) ) {
+					add_action( 'ac_inspection_'.$schedule, array( __CLASS__, 'inspection_complete' ), 999, 0 );
+				}
+			}
+
+			if ( !has_action( 'ac_inspection_now', array( __CLASS__, 'inspection_complete' ) ) ) {
+				add_action( 'ac_inspection_now', array( __CLASS__, 'inspection_complete' ), 999, 0 );
+			}
+
+			if ( 'cron_schedules' == current_filter() ) {
+				add_filter( 'cron_schedules', array( __CLASS__, __FUNCTION__ ), 999, 1 );
+			}
+
+			if ( $return_schedules ) {
+				return $schedules;
 			}
 
 		}
 
-		/* Clear job on deactivation */
-		public static function deactivate() {
+		public static function unschedule_inspections( $schedules = array() ) {
 
-			$schedules = wp_get_schedules();
+			if ( !is_array( $schedules ) || count( $schedules ) <= 0 ) {
+				$schedules = wp_get_schedules();
+			}
 
 			foreach( array_keys( $schedules ) as $schedule ) {
 				if ( wp_next_scheduled( 'ac_inspection_'.$schedule ) ) {
@@ -98,7 +122,6 @@ if(!class_exists('AC_Inspector')) {
 
 		}
 
-		/* Plugin update actions */
 		private function _on_update() {
 
 			if ( wp_next_scheduled( 'ac_inspection' ) ) {
@@ -109,8 +132,8 @@ if(!class_exists('AC_Inspector')) {
 
 			if ( empty($saved_version) || version_compare($saved_version, ACI_PLUGIN_VERSION, '<') ) {
 
-				self::deactivate();
-				self::activate();
+				self::unschedule_inspections();
+				self::schedule_inspections();
 
 				self::update_option( __CLASS__.'_Version', ACI_PLUGIN_VERSION );
 
@@ -141,7 +164,7 @@ if(!class_exists('AC_Inspector')) {
 				return get_option( $name );
 
 			}
-			
+
 		}
 
 		public static function add_option( $name, $value ) {
@@ -299,7 +322,7 @@ if(!class_exists('AC_Inspector')) {
 		public function increment_error_count() {
 
 			self::$error_count++;
-			
+
 		}
 
 		public function get_success_count() {
@@ -416,11 +439,11 @@ if(!class_exists('AC_Inspector')) {
 
 			if ( defined('WP_CLI') && WP_CLI ) {
 				// Re-enable scheduled inspections if running from CLI...
-				self::activate();
+				self::schedule_inspections();
 			}
 
 		}
 
-	} 
+	}
 
-} 
+}

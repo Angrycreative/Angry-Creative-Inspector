@@ -124,6 +124,33 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 				return false;
 			}
 
+			if ( self::is_scheduled( $routine ) ) {
+
+				$schedules = array_keys( wp_get_schedules() );
+				$inspection_method = self::get_inspection_method( $routine, self::get_options( $routine ) );
+
+				$filters = $GLOBALS['wp_filter'][ $action ];
+
+				foreach( $schedules as $schedule ) {
+					$action = 'ac_inspection_'.$schedule;
+					$filters = $GLOBALS['wp_filter'][$action];
+					if ( !empty( $filters ) ) {
+						foreach ( $filters as $priority => $filter ) {
+							foreach ( $filter as $identifier => $function ) {
+								if ( $function['function'] === $inspection_method ) {
+									remove_filter(
+										$action,
+										$inspection_method,
+										$priority
+									);
+								}
+							}
+						}
+					}
+				}
+
+			}
+
 			$options_key = self::routine_options_key($routine);
 
 			return AC_Inspector::update_option($options_key, $args);
@@ -397,14 +424,10 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 		public static function get_hooked_routines() {
 
 			$hooked_routines = array();
-			$schedules = wp_get_schedules();
 
 			foreach(array_keys(self::$routine_triggers) as $routine) {
-				foreach(self::$routine_triggers[$routine] as $trigger) {
-					if ( !in_array( $trigger, array_keys( $schedules ) ) && !in_array( $routine, $hooked_routines ) ) {
-						$hooked_routines[] = $routine;
-						break;
-					}
+				if ( !self::is_scheduled( $routine ) ) {
+					$hooked_routines[] = $routine;
 				}
 			}
 
@@ -426,11 +449,13 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Routine_Handler') ) {
 
 			$schedules = wp_get_schedules();
 
-			return ( count ( array_intersect( array_keys( $schedules ), self::$routine_triggers[$routine] ) ) >= 1 ) ? true : false;
+			$routine_schedules = array_map( function( $trigger ) {
+				return str_replace( 'ac_inspection_', '', $trigger );
+			}, self::$routine_triggers[$routine] );
+
+			return ( count( array_intersect( array_keys( $schedules ), $routine_schedules ) ) >= 1 ) ? true : false;
 
 		}
-
-		
 
 	}
 

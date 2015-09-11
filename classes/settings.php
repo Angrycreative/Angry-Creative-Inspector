@@ -426,12 +426,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 					$new_routine_settings = array();
 				}
 
-				foreach($routine_settings as $opt => $val) {
-
-					if ( isset( $new_routine_settings[$opt] ) ) {
-						$routine_settings[$opt] = $new_routine_settings[$opt];
-					}
-
+				foreach( $new_routine_settings as $opt => $val ) {
+					$routine_settings[$opt] = $new_routine_settings[$opt];
 				}
 
 				$routine_settings = apply_filters( $routine.'_settings', $routine_settings );
@@ -447,8 +443,8 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 					add_query_arg(
 						array( 'page' => ACI_PLUGIN_SLUG, 'updated' => 'true' ),
 						network_admin_url( 'settings.php' )
-						)
-					);
+					)
+				);
 
 				exit;
 
@@ -544,14 +540,22 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 						<?php
 
-						if ( $schedules ) { ?>
+						if ( $schedules ) { 
+
+							if ( !array_key_exists( 'schedule', $routine_settings[$site_blog_id] ) || empty( $routine_settings[$site_blog_id]['schedule'] ) || !in_array( $routine_settings[$site_blog_id]['schedule'], array_keys( $schedules ) ) ) {
+								$scheduled = 'daily';
+							} else {
+								$scheduled = $routine_settings[$site_blog_id]['schedule'];
+							}
+
+							?>
 
 							<tr valign="top">
 								<td scope="row" valign="top"><?php printf( __( 'Recurrence on %s', ACI_PLUGIN_TEXTDOMAIN ), $sitename ); ?></td>
 								<td>
 									<select id="<?php echo $routine; ?>_<?php echo $site_blog_id; ?>_schedule" name="<?php echo self::$_plugin_action_slug; ?>[<?php echo $routine; ?>][<?php echo $site_blog_id; ?>][schedule]">
-										<?php foreach( $schedules as $schedule ) { ?>
-											<option value="<?php echo $schedule; ?>"<?php echo ($schedule == $routine_settings[$site_blog_id]['schedule']) ? " selected" : ""; ?>><?php _e( ucfirst($schedule), ACI_PLUGIN_TEXTDOMAIN ); ?></option>
+										<?php foreach( array_keys( $schedules ) as $schedule ) { ?>
+											<option value="<?php echo $schedule; ?>"<?php echo ( $schedule == $scheduled ) ? " selected" : ""; ?>><?php _e( $schedules[$schedule]['display'], ACI_PLUGIN_TEXTDOMAIN ); ?></option>
 										<?php } ?>
 									</select>
 								</td>
@@ -579,14 +583,22 @@ if ( class_exists('AC_Inspector') && !class_exists('ACI_Settings') ) {
 
 				<?php
 
-				if ( $schedules ) { ?>
+				if ( $schedules ) {
+
+					if ( !array_key_exists( 'schedule', $routine_settings ) || empty( $routine_settings['schedule'] ) || !in_array( $routine_settings['schedule'], array_keys( $schedules ) ) ) {
+						$scheduled = 'daily';
+					} else {
+						$scheduled = $routine_settings['schedule'];
+					}
+
+					?>
 
 					<tr valign="top">
 						<td scope="row" valign="top"><?php _e( 'Recurrence', ACI_PLUGIN_TEXTDOMAIN ); ?></td>
 						<td>
 							<select id="<?php echo $routine; ?>_schedule" name="<?php echo self::$_plugin_action_slug; ?>[<?php echo $routine; ?>][schedule]">
-								<?php foreach( $schedules as $schedule ) { ?>
-									<option value="<?php echo $schedule; ?>"<?php echo ($schedule == $routine_settings[$site_blog_id]['schedule']) ? " selected" : ""; ?>><?php _e( ucfirst($schedule), ACI_PLUGIN_TEXTDOMAIN ); ?></option>
+								<?php foreach( array_keys( $schedules ) as $schedule ) { ?>
+									<option value="<?php echo $schedule; ?>"<?php echo ( $schedule == $scheduled ) ? " selected" : ""; ?>><?php _e( $schedules[$schedule]['display'], ACI_PLUGIN_TEXTDOMAIN ); ?></option>
 								<?php } ?>
 							</select>
 						</td>
